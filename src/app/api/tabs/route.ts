@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createTab, addItem } from '@/lib/db'
+import { createTab, addItem, uploadFile, setTabReceiptKey } from '@/lib/db'
 import { sendTab, finalizeTab } from '@/lib/tabs'
-import { uploadFile } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -25,7 +24,7 @@ export async function POST(req: NextRequest) {
       `uohmi/receipts/${tab.id}.${ext}`,
       Buffer.from(receiptBase64, 'base64'), receiptMediaType
     )
-    if (receiptFileKey) await (await import('@/lib/db')).setTabReceiptKey(tab.id, receiptFileKey)
+    if (receiptFileKey) await setTabReceiptKey(tab.id, receiptFileKey)
   }
 
   await (finalize ? finalizeTab : sendTab)(tab.id, finalize)

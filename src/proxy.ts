@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export function proxy(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const sessionCookie = request.cookies.get('uohmi_session')
   const { pathname } = request.nextUrl
   const isPublic = pathname.startsWith('/pay') || pathname.startsWith('/api/payments') || pathname.startsWith('/api/auth') || pathname === '/login' || pathname.startsWith('/api/public')

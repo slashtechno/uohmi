@@ -1,19 +1,19 @@
-import { getTabs } from '@/lib/db'
-import { getTabFull } from '@/lib/db'
+import { getTabsFull } from '@/lib/db'
 import { StatusBadge } from '@/components/StatusBadge'
 import { formatMoney, timeAgo } from '@/lib/utils'
 import Link from 'next/link'
+import type { Tab, Item, Payment } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage() {
-  const tabs = await getTabs()
+type FullTab = { tab: Tab; items: Item[]; payments: Payment[]; total: number; confirmedPaid: number; balance: number; hasUnconfirmed: boolean }
 
-  let totalOutstanding = 0
-  for (const tab of tabs) {
-    const full = await getTabFull(tab.id)
-    if (full) totalOutstanding += full.balance
-  }
+export default async function DashboardPage() {
+  const fulls = await getTabsFull()
+
+  const totalOutstanding = fulls
+    .filter(f => f.tab.status !== 'FORGIVEN' && f.tab.status !== 'PAID')
+    .reduce((s, f) => s + f.balance, 0)
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
@@ -21,7 +21,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold text-accent font-serif">uohmi</h1>
           <p className="text-ink-2 mt-1">
-            {tabs.length === 0
+            {fulls.length === 0
               ? "No invoices yet. Either your friends are very generous, or you haven't started."
               : `Outstanding: ${formatMoney(totalOutstanding)}`}
           </p>
@@ -34,7 +34,7 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      {tabs.length === 0 && (
+      {fulls.length === 0 && (
         <div className="bg-card border border-border rounded-xl p-8 text-center">
           <p className="text-ink-2 text-lg">Create your first invoice</p>
           <p className="text-ink-3 text-sm mt-2">Track who owes you what, slightly sarcastically.</p>
@@ -42,19 +42,16 @@ export default async function DashboardPage() {
       )}
 
       <div className="space-y-3">
-        {tabs.map((tab) => (
-          <InvoiceCard key={tab.id} tab={tab} />
+        {fulls.map((full) => (
+          <InvoiceCard key={full.tab.id} full={full} />
         ))}
       </div>
     </main>
   )
 }
 
-async function InvoiceCard({ tab }: { tab: any }) {
-  const full = await getTabFull(tab.id)
-  if (!full) return null
-
-  const { total, balance, hasUnconfirmed } = full
+function InvoiceCard({ full }: { full: FullTab }) {
+  const { tab, items, total, balance, hasUnconfirmed } = full
 
   return (
     <Link href={`/invoices/${tab.id}`}>
@@ -66,7 +63,7 @@ async function InvoiceCard({ tab }: { tab: any }) {
               <StatusBadge status={tab.status} hasUnconfirmed={hasUnconfirmed} />
             </div>
             <p className="text-sm text-ink-2">
-              {full.items.length} item{full.items.length !== 1 ? 's' : ''} · {timeAgo(tab.createdAt)}
+              {items.length} item{items.length !== 1 ? 's' : ''} · {timeAgo(tab.createdAt)}
             </p>
           </div>
           <div className="text-right">

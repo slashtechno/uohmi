@@ -33,6 +33,23 @@ async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
   return r.json()
 }
 
+// Only nanoid-style alphanumeric+hyphen+underscore values are safe to interpolate into GViz SQL.
+// The backend doesn't advertise parameterized queries, so we validate before interpolation.
+function safeId(value: string): string {
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(value)) throw new Error(`Unsafe value for GViz query: ${value}`)
+  return value
+}
+
+async function query<T = Row>(table: string, sql: string): Promise<(T & { _row: number })[]> {
+  if (!BASE || !APP || !KEY) return []
+  const r = await fetch(`${BASE}/api/${APP}/${table}/query`, {
+    method: 'POST', headers: H(), body: JSON.stringify({ sql }), cache: 'no-store',
+  })
+  if (!r.ok) return []
+  const data = await r.json()
+  return data.rows ?? data
+}
+
 async function append(table: string, row: Record<string, unknown>): Promise<void> {
   if (!BASE || !APP || !KEY) return
   const r = await fetch(`${BASE}/api/${APP}/${table}`, {
@@ -102,27 +119,26 @@ export async function getTabs(): Promise<Tab[]> {
 }
 
 export async function getTab(id: string): Promise<Tab | null> {
-  const r = (await all<Tab>('Tabs')).find(r => r.id === id)
-  return r ? coerceTab(r) : null
+  const rows = await query<Tab>('Tabs', `SELECT * WHERE id = '${safeId(id)}'`)
+  return rows[0] ? coerceTab(rows[0]) : null
 }
 
 export async function getTabByToken(token: string): Promise<Tab | null> {
-  const r = (await all<Tab>('Tabs')).find(r => r.token === token)
-  return r ? coerceTab(r) : null
+  const rows = await query<Tab>('Tabs', `SELECT * WHERE token = '${safeId(token)}'`)
+  return rows[0] ? coerceTab(rows[0]) : null
 }
 
 export async function updateTabStatus(id: string, status: TabStatus) {
-  const rows = await all<Tab>('Tabs')
-  const r = rows.find(r => r.id === id)
+  const rows = await query<Tab>('Tabs', `SELECT * WHERE id = '${safeId(id)}'`)
+  const r = rows[0]
   if (!r) return
   const extra = ['CLOSED','PAID','FORGIVEN'].includes(status) ? { closedAt: new Date().toISOString() } : {}
   await update('Tabs', r._row, { status, ...extra })
 }
 
 export async function setTabReceiptKey(id: string, fileKey: string) {
-  const rows = await all<Tab>('Tabs')
-  const r = rows.find(r => r.id === id)
-  if (r) await update('Tabs', r._row, { receiptFileKey: fileKey })
+  const rows = await query<Tab>('Tabs', `SELECT * WHERE id = '${safeId(id)}'`)
+  if (rows[0]) await update('Tabs', rows[0]._row, { receiptFileKey: fileKey })
 }
 
 export interface Item {
@@ -137,14 +153,13 @@ export async function addItem(tabId: string, description: string, amountCents: n
 }
 
 export async function getItems(tabId: string): Promise<Item[]> {
-  const rows = await all<Item>('Items')
-  return rows.filter(r => r.tabId === tabId).map(r => ({ ...r, amountCents: Number(r.amountCents) }))
+  const rows = await query<Item>('Items', `SELECT * WHERE tabId = '${safeId(tabId)}'`)
+  return rows.map(r => ({ ...r, amountCents: Number(r.amountCents) }))
 }
 
 export async function deleteItem(itemId: string) {
-  const rows = await all<Item>('Items')
-  const r = rows.find(r => r.id === itemId)
-  if (r) await remove('Items', r._row)
+  const rows = await query<Item>('Items', `SELECT * WHERE id = '${safeId(itemId)}'`)
+  if (rows[0]) await remove('Items', rows[0]._row)
 }
 
 export type Method = 'CASH' | 'ZELLE' | 'OTHER'
@@ -167,32 +182,44 @@ export async function addPayment(p: Omit<Payment, 'id'|'createdAt'|'_row'>): Pro
 }
 
 export async function getPayments(tabId: string): Promise<Payment[]> {
-  return (await all<Payment>('Payments'))
-    .filter(r => r.tabId === tabId)
-    .map(r => ({
-      ...r,
-      amountCents: Number(r.amountCents),
-      confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
-      aiPassed: r.aiPassed ? String(r.aiPassed).toUpperCase() === 'TRUE' : undefined,
-    }))
+  const rows = await query<Payment>('Payments', `SELECT * WHERE tabId = '${safeId(tabId)}'`)
+  return rows.map(r => ({
+    ...r,
+    amountCents: Number(r.amountCents),
+    confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
+    aiPassed: r.aiPassed ? String(r.aiPassed).toUpperCase() === 'TRUE' : undefined,
+  }))
 }
 
 export async function confirmPayment(paymentId: string) {
-  const rows = await all<Payment>('Payments')
-  const r = rows.find(r => r.id === paymentId)
-  if (r) await update('Payments', r._row, { confirmed: 'TRUE' })
+  const rows = await query<Payment>('Payments', `SELECT * WHERE id = '${safeId(paymentId)}'`)
+  if (rows[0]) await update('Payments', rows[0]._row, { confirmed: 'TRUE' })
+}
+
+function tally(items: Item[], payments: Payment[]) {
+  const total = items.reduce((s, i) => s + i.amountCents, 0)
+  const confirmedPaid = payments.filter(p => p.confirmed).reduce((s, p) => s + p.amountCents, 0)
+  return { total, confirmedPaid, balance: total - confirmedPaid, hasUnconfirmed: payments.some(p => !p.confirmed) }
 }
 
 export async function getTabFull(tabId: string) {
   const [tab, items, payments] = await Promise.all([getTab(tabId), getItems(tabId), getPayments(tabId)])
   if (!tab) return null
-  const total = items.reduce((s, i) => s + i.amountCents, 0)
-  const confirmedPaid = payments.filter(p => p.confirmed).reduce((s, p) => s + p.amountCents, 0)
-  return {
-    tab, items, payments, total, confirmedPaid,
-    balance: total - confirmedPaid,
-    hasUnconfirmed: payments.some(p => !p.confirmed),
-  }
+  return { tab, items, payments, ...tally(items, payments) }
+}
+
+export async function getTabsFull() {
+  const [allTabs, allItems, allPayments] = await Promise.all([all<Tab>('Tabs'), all<Item>('Items'), all<Payment>('Payments')])
+  return allTabs.map(coerceTab).reverse().map(tab => {
+    const items = allItems.filter(r => r.tabId === tab.id).map(r => ({ ...r, amountCents: Number(r.amountCents) })) as Item[]
+    const payments = allPayments.filter(r => r.tabId === tab.id).map(r => ({
+      ...r,
+      amountCents: Number(r.amountCents),
+      confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
+      aiPassed: r.aiPassed ? String(r.aiPassed).toUpperCase() === 'TRUE' : undefined,
+    })) as Payment[]
+    return { tab, items, payments, ...tally(items, payments) }
+  })
 }
 
 export async function uploadFile(key: string, bytes: Buffer, contentType: string): Promise<string | null> {
