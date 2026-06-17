@@ -1,0 +1,221 @@
+const BASE = (process.env.GSDB_URL ?? '').replace(/\/$/, '')
+const APP  = process.env.GSDB_APP_ID ?? ''
+const KEY  = process.env.GSDB_API_KEY ?? ''
+
+const H = (extra?: Record<string, string>) => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${KEY}`,
+  ...extra,
+})
+
+let schemaEnsured = false
+
+async function ensureSchemaOnce() {
+  if (schemaEnsured || !BASE || !APP || !KEY) return
+  try {
+    await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Tabs' }) })
+    await fetch(`${BASE}/api/${APP}/Tabs/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','token','recipientName','recipientEmail','status','isRunning','notes','receiptFileKey','createdAt','closedAt'] }) })
+    await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Items' }) })
+    await fetch(`${BASE}/api/${APP}/Items/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','tabId','description','amountCents','createdAt'] }) })
+    await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Payments' }) })
+    await fetch(`${BASE}/api/${APP}/Payments/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','tabId','amountCents','method','confirmed','aiVerdict','aiPassed','screenshotFileKey','senderNote','createdAt'] }) })
+    schemaEnsured = true
+  } catch {}
+}
+
+type Row = Record<string, any> & { _row: number }
+
+async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
+  if (!BASE || !APP || !KEY) return []
+  await ensureSchemaOnce()
+  const r = await fetch(`${BASE}/api/${APP}/${table}`, { headers: H(), cache: 'no-store' })
+  if (!r.ok) return []
+  return r.json()
+}
+
+async function append(table: string, row: Record<string, unknown>): Promise<void> {
+  if (!BASE || !APP || !KEY) return
+  const r = await fetch(`${BASE}/api/${APP}/${table}`, {
+    method: 'POST', headers: H(), body: JSON.stringify(row),
+  })
+  if (!r.ok) return
+}
+
+async function update(table: string, rowIndex: number, fields: Record<string, unknown>): Promise<void> {
+  const r = await fetch(`${BASE}/api/${APP}/${table}/${rowIndex}`, {
+    method: 'PATCH', headers: H(), body: JSON.stringify(fields),
+  })
+  if (!r.ok) throw new Error(`gsdb PATCH ${table}/${rowIndex} → ${r.status}`)
+}
+
+async function remove(table: string, rowIndex: number): Promise<void> {
+  const r = await fetch(`${BASE}/api/${APP}/${table}/${rowIndex}`, {
+    method: 'DELETE', headers: H(),
+  })
+  if (!r.ok) throw new Error(`gsdb DELETE ${table}/${rowIndex} → ${r.status}`)
+}
+
+export async function ensureSchema() {
+  const tables: Record<string, string[]> = {
+    Tabs:     ['id','token','recipientName','recipientEmail','status','isRunning','notes','receiptFileKey','createdAt','closedAt'],
+    Items:    ['id','tabId','description','amountCents','createdAt'],
+    Payments: ['id','tabId','amountCents','method','confirmed','aiVerdict','aiPassed','screenshotFileKey','senderNote','createdAt'],
+  }
+  for (const [table, columns] of Object.entries(tables)) {
+    await fetch(`${BASE}/api/${APP}/${table}/schema`, {
+      method: 'PUT', headers: H(), body: JSON.stringify({ columns }),
+    })
+  }
+}
+
+export type TabStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'PAID' | 'FORGIVEN'
+
+export interface Tab {
+  id: string; token: string
+  recipientName: string; recipientEmail: string
+  status: TabStatus; isRunning: boolean
+  notes?: string; receiptFileKey?: string
+  createdAt: string; closedAt?: string
+  _row: number
+}
+
+function coerceTab(r: any): Tab {
+  return { ...r, isRunning: String(r.isRunning).toUpperCase() === 'TRUE' }
+}
+
+export async function createTab(input: {
+  recipientName: string; recipientEmail: string; isRunning: boolean; notes?: string
+}): Promise<Tab> {
+  const { nanoid } = await import('nanoid')
+  const tab = {
+    id: nanoid(10), token: nanoid(16), status: 'DRAFT' as TabStatus,
+    createdAt: new Date().toISOString(),
+    ...input,
+    isRunning: String(input.isRunning).toUpperCase(),
+  }
+  await append('Tabs', tab as any)
+  return coerceTab({ ...tab, _row: -1 })
+}
+
+export async function getTabs(): Promise<Tab[]> {
+  return (await all<Tab>('Tabs')).map(coerceTab).reverse()
+}
+
+export async function getTab(id: string): Promise<Tab | null> {
+  const r = (await all<Tab>('Tabs')).find(r => r.id === id)
+  return r ? coerceTab(r) : null
+}
+
+export async function getTabByToken(token: string): Promise<Tab | null> {
+  const r = (await all<Tab>('Tabs')).find(r => r.token === token)
+  return r ? coerceTab(r) : null
+}
+
+export async function updateTabStatus(id: string, status: TabStatus) {
+  const rows = await all<Tab>('Tabs')
+  const r = rows.find(r => r.id === id)
+  if (!r) return
+  const extra = ['CLOSED','PAID','FORGIVEN'].includes(status) ? { closedAt: new Date().toISOString() } : {}
+  await update('Tabs', r._row, { status, ...extra })
+}
+
+export async function setTabReceiptKey(id: string, fileKey: string) {
+  const rows = await all<Tab>('Tabs')
+  const r = rows.find(r => r.id === id)
+  if (r) await update('Tabs', r._row, { receiptFileKey: fileKey })
+}
+
+export interface Item {
+  id: string; tabId: string; description: string; amountCents: number; createdAt: string; _row: number
+}
+
+export async function addItem(tabId: string, description: string, amountCents: number): Promise<Item> {
+  const { nanoid } = await import('nanoid')
+  const item = { id: nanoid(10), tabId, description, amountCents, createdAt: new Date().toISOString() }
+  await append('Items', item)
+  return { ...item, _row: -1 }
+}
+
+export async function getItems(tabId: string): Promise<Item[]> {
+  const rows = await all<Item>('Items')
+  return rows.filter(r => r.tabId === tabId).map(r => ({ ...r, amountCents: Number(r.amountCents) }))
+}
+
+export async function deleteItem(itemId: string) {
+  const rows = await all<Item>('Items')
+  const r = rows.find(r => r.id === itemId)
+  if (r) await remove('Items', r._row)
+}
+
+export type Method = 'CASH' | 'ZELLE' | 'OTHER'
+
+export interface Payment {
+  id: string; tabId: string; amountCents: number; method: Method
+  confirmed: boolean; aiVerdict?: string; aiPassed?: boolean
+  screenshotFileKey?: string; senderNote?: string; createdAt: string; _row: number
+}
+
+export async function addPayment(p: Omit<Payment, 'id'|'createdAt'|'_row'>): Promise<Payment> {
+  const { nanoid } = await import('nanoid')
+  const row = {
+    ...p, id: nanoid(10), createdAt: new Date().toISOString(),
+    confirmed: String(p.confirmed).toUpperCase(),
+    aiPassed: p.aiPassed === undefined ? '' : String(p.aiPassed).toUpperCase(),
+  }
+  await append('Payments', row as any)
+  return { ...p, id: row.id, createdAt: row.createdAt, _row: -1 }
+}
+
+export async function getPayments(tabId: string): Promise<Payment[]> {
+  return (await all<Payment>('Payments'))
+    .filter(r => r.tabId === tabId)
+    .map(r => ({
+      ...r,
+      amountCents: Number(r.amountCents),
+      confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
+      aiPassed: r.aiPassed ? String(r.aiPassed).toUpperCase() === 'TRUE' : undefined,
+    }))
+}
+
+export async function confirmPayment(paymentId: string) {
+  const rows = await all<Payment>('Payments')
+  const r = rows.find(r => r.id === paymentId)
+  if (r) await update('Payments', r._row, { confirmed: 'TRUE' })
+}
+
+export async function getTabFull(tabId: string) {
+  const [tab, items, payments] = await Promise.all([getTab(tabId), getItems(tabId), getPayments(tabId)])
+  if (!tab) return null
+  const total = items.reduce((s, i) => s + i.amountCents, 0)
+  const confirmedPaid = payments.filter(p => p.confirmed).reduce((s, p) => s + p.amountCents, 0)
+  return {
+    tab, items, payments, total, confirmedPaid,
+    balance: total - confirmedPaid,
+    hasUnconfirmed: payments.some(p => !p.confirmed),
+  }
+}
+
+export async function uploadFile(key: string, bytes: Buffer, contentType: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${BASE}/api/${APP}/files/${key}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': contentType },
+      body: new Uint8Array(bytes),
+    })
+    if (r.status === 501) return null
+    return r.ok ? key : null
+  } catch { return null }
+}
+
+export async function getFileUrl(key: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${BASE}/api/${APP}/files/${key}`, { headers: H() })
+    if (!r.ok) return null
+    const { url } = await r.json()
+    return url as string
+  } catch { return null }
+}
+
+export async function deleteFile(key: string): Promise<void> {
+  await fetch(`${BASE}/api/${APP}/files/${key}`, { method: 'DELETE', headers: H() }).catch(() => {})
+}

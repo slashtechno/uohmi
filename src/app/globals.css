@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+:root {
+  /* Backgrounds */
+  --bg:          #faf8f5;
+  --card:        #ffffff;
+  --card-hover:  #fdf9f6;
+
+  /* Borders */
+  --border:      #e5ddd6;
+  --border-focus:#b8a89e;
+
+  /* Text */
+  --ink:         #2c2825;
+  --ink-2:       #7c6e67;
+  --ink-3:       #c4b5ac;
+
+  /* Brand accent — dusty rose */
+  --accent:      #c4847a;
+  --accent-dark: #a8685e;
+  --accent-bg:   #fdf0ee;
+
+  /* Status: DRAFT */
+  --s-draft-bg:    #f3f0ec;
+  --s-draft-text:  #6b6560;
+
+  /* Status: OPEN (running tab) — soft periwinkle */
+  --s-open-bg:     #e4ecff;
+  --s-open-text:   #354fa0;
+
+  /* Status: CLOSED (awaiting payment) — butter */
+  --s-closed-bg:   #fef6d0;
+  --s-closed-text: #9a6c00;
+
+  /* Status: PAID — sage */
+  --s-paid-bg:     #d8f0e0;
+  --s-paid-text:   #2a7a4a;
+
+  /* Status: FORGIVEN */
+  --s-forgiven-bg:   #f0ece8;
+  --s-forgiven-text: #8b7d74;
+
+  /* Status: payment to confirm — blush */
+  --s-confirm-bg:    #fde8e4;
+  --s-confirm-text:  #a04030;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-bg: var(--accent-bg);
+  
+  --color-s-draft-bg: var(--s-draft-bg);
+  --color-s-draft-text: var(--s-draft-text);
+  --color-s-open-bg: var(--s-open-bg);
+  --color-s-open-text: var(--s-open-text);
+  --color-s-closed-bg: var(--s-closed-bg);
+  --color-s-closed-text: var(--s-closed-text);
+  --color-s-paid-bg: var(--s-paid-bg);
+  --color-s-paid-text: var(--s-paid-text);
+  --color-s-forgiven-bg: var(--s-forgiven-bg);
+  --color-s-forgiven-text: var(--s-forgiven-text);
+  --color-s-confirm-bg: var(--s-confirm-bg);
+  --color-s-confirm-text: var(--s-confirm-text);
+  
+  --font-serif: 'Georgia', 'Times New Roman', serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Juice: universal button press */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform 0.08s ease;
+}
+
+/* Juice: fade-in utility */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px) }
+  to   { opacity: 1; transform: none }
+}
+.animate-fade-in { animation: fade-in 0.2s ease-out }
+
+/* iOS safe-area padding for bottom nav/buttons */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px) }
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-focus);
+}
