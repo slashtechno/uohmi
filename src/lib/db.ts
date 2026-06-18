@@ -158,7 +158,9 @@ export async function deleteTab(tabId: string) {
 }
 
 export async function deleteTabCascade(tabId: string) {
-  const [items, payments] = await Promise.all([getItems(tabId), getPayments(tabId)])
+  const [allItems, allPayments] = await Promise.all([all<Item>('Items'), all<Payment>('Payments')])
+  const items = allItems.filter(i => i.tabId === tabId)
+  const payments = allPayments.filter(p => p.tabId === tabId)
   // delete in series — GSDB row indices shift after each removal
   for (const item of items) await remove('Items', item._row)
   for (const payment of payments) await remove('Payments', payment._row)

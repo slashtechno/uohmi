@@ -45,6 +45,11 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
                 <Text style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: '24px' }}>
                   Hi {tab.recipientName}, the invoice sent to you has been cancelled. You don't owe anything.
                 </Text>
+                {tab.notes && (
+                  <Section style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fdf0ee', borderRadius: '8px' }}>
+                    <Text style={{ fontSize: '14px', color: '#a8685e', fontStyle: 'italic' }}>"{tab.notes}"</Text>
+                  </Section>
+                )}
                 <Text style={{ fontSize: '14px', color: '#7c6e67', fontStyle: 'italic' }}>
                   No further action is needed on your part.
                 </Text>
