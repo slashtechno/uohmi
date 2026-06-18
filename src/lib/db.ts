@@ -70,13 +70,19 @@ export interface Tab {
   id: string; token: string
   recipientName: string; recipientEmail: string
   status: TabStatus
-  notes?: string; receiptFileKey?: string
+  notes?: string; receiptFileKeys?: string[]
   createdAt: string; closedAt?: string
   _row: number
 }
 
 function coerceTab(r: any): Tab {
-  return r as Tab
+  const raw = r.receiptFileKey
+  let receiptFileKeys: string[] | undefined
+  if (typeof raw === 'string' && raw.length > 0) {
+    try { receiptFileKeys = JSON.parse(raw) } catch { receiptFileKeys = [raw] }
+  }
+  const { receiptFileKey: _dropped, ...rest } = r
+  return { ...rest, ...(receiptFileKeys ? { receiptFileKeys } : {}) } as Tab
 }
 
 export async function createTab(input: {
@@ -113,9 +119,11 @@ export async function updateTabStatus(id: string, status: TabStatus) {
   await update('Tabs', r._row, { status, ...extra })
 }
 
-export async function setTabReceiptKey(id: string, fileKey: string) {
+export async function addTabReceiptKey(id: string, fileKey: string) {
   const r = await findRow<Tab>('Tabs', row => row.id === id)
-  if (r) await update('Tabs', r._row, { receiptFileKey: fileKey })
+  if (!r) return
+  const existing = r.receiptFileKeys ?? []
+  await update('Tabs', r._row, { receiptFileKey: JSON.stringify([...existing, fileKey]) })
 }
 
 export async function updateTab(id: string, fields: { recipientName?: string; recipientEmail?: string; notes?: string }) {

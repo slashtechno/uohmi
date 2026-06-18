@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createTab, addItem, uploadFile, setTabReceiptKey } from '@/lib/db'
+import { createTab, addItem, uploadFile, addTabReceiptKey } from '@/lib/db'
 import { sendTab, finalizeTab } from '@/lib/tabs'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { recipientName, recipientEmail, notes, items, receiptBase64, receiptMediaType, finalize } = body
+  const { recipientName, recipientEmail, notes, items, receipts, finalize } = body
 
   if (!recipientName || !recipientEmail) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -18,13 +18,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (receiptBase64 && receiptMediaType) {
-    const ext = receiptMediaType.split('/')[1] ?? 'png'
-    const receiptFileKey = await uploadFile(
-      `uohmi/receipts/${tab.id}.${ext}`,
-      Buffer.from(receiptBase64, 'base64'), receiptMediaType
-    )
-    if (receiptFileKey) await setTabReceiptKey(tab.id, receiptFileKey)
+  if (Array.isArray(receipts) && receipts.length > 0) {
+    for (let i = 0; i < receipts.length; i++) {
+      const { base64, mediaType } = receipts[i]
+      if (!base64 || !mediaType) continue
+      const ext = mediaType.split('/')[1] ?? 'png'
+      const key = await uploadFile(
+        `uohmi/receipts/${tab.id}-${i}.${ext}`,
+        Buffer.from(base64, 'base64'), mediaType
+      )
+      if (key) await addTabReceiptKey(tab.id, key)
+    }
   }
 
   await (finalize ? finalizeTab : sendTab)(tab.id, finalize)
