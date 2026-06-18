@@ -35,4 +35,4 @@ Generate a test receipt for the AI parser:
 
 ## Env vars
 
-See `.env.example`. Required: `GSDB_URL`, `GSDB_APP_ID`, `GSDB_API_KEY`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `NEXT_PUBLIC_APP_URL`. Optional: `NTFY_TOPIC`, `AI_GATEWAY_API_KEY` (or `OPENAI_BASE_URL`).
+See `.env.example`. Required: `GSDB_URL`, `GSDB_APP_ID`, `GSDB_API_KEY`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL`. Optional: `NEXT_PUBLIC_APP_URL` (auto-detected from `VERCEL_PROJECT_PRODUCTION_URL`/`VERCEL_URL` on Vercel; defaults to `http://localhost:3000` locally), `NTFY_TOPIC`, `AI_GATEWAY_API_KEY` (or `OPENAI_BASE_URL`).

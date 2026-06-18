@@ -1,4 +1,5 @@
 import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTab } from '@/lib/db'
+import { appUrl } from '@/lib/url'
 import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/tabs'
 import { AddExpenseForm } from '@/components/AddExpenseForm'
 import { redirect } from 'next/navigation'
@@ -74,7 +75,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     redirect(`/invoices/${tab.id}`)
   }
 
-  const payUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pay/${tab.token}`
+  const payUrl = `${appUrl()}/pay/${tab.token}`
   const canEdit = tab.status === 'DRAFT' || tab.status === 'OPEN'
   const canRemind = tab.status === 'OPEN' || tab.status === 'CLOSED'
 

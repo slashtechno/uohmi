@@ -17,7 +17,9 @@ async function push(opts: { title: string; message: string; priority?: string; t
   } catch (e) { console.error('ntfy failed', e) }
 }
 
-const adminUrl = (id: string) => `${process.env.NEXT_PUBLIC_APP_URL}/invoices/${id}`
+import { appUrl } from "./url"
+
+const adminUrl = (id: string) => `${appUrl()}/invoices/${id}`
 
 export const notifications = {
   tabSent: (name: string, finalized: boolean) =>

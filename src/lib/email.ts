@@ -2,6 +2,7 @@ import { Resend } from "resend"
 import { render } from "react-email"
 import { TabEmail } from "@/emails/TabEmail"
 import type { Tab, Item } from "./db"
+import { appUrl } from "./url"
 
 const FROM = process.env.RESEND_FROM_EMAIL || "uohmi <invoices@yourdomain.com>"
 
@@ -35,7 +36,7 @@ export async function sendTabEmail(args: {
   balance: number
   latest?: string
 }) {
-  const payUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pay/${args.tab.token}`
+  const payUrl = `${appUrl()}/pay/${args.tab.token}`
   const subject = subjects[args.kind](args.total)
   
   if (process.env.RESEND_API_KEY) {
