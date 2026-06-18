@@ -17,7 +17,7 @@ Single-admin. `ADMIN_PASSWORD` to log in; session cookie value compared to `SESS
 
 ## Key conventions
 
-- GSDB schema changes: use `PATCH /schema` with `{ op: "remove", name }` to delete columns — this calls `deleteDimension` and physically shifts columns, avoiding header drift. Never use `PUT /schema` to remove columns (it only rewrites headers positionally).
+- GSDB schema changes: use `DELETE /schema/{column}` to remove a column (calls `deleteDimension`, physically shifts columns, avoids header drift). Use `POST /schema/{column}` to add, `PUT /schema/{column}` to rename. `PUT /schema` is a full-replace that deletes removed columns and their data.
 - Server actions in `src/app/invoices/[id]/page.tsx` must call `redirect()` after mutations or the server component won't re-render.
 - `AddExpenseForm` is a client component (`src/components/AddExpenseForm.tsx`) — it supports both manual entry and receipt parsing via `POST /api/receipts/parse`.
 

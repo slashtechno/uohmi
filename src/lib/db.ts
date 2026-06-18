@@ -17,50 +17,34 @@ async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
   return r.json()
 }
 
-// Only nanoid-style alphanumeric+hyphen+underscore values are safe to interpolate into GViz SQL.
-// The backend doesn't advertise parameterized queries, so we validate before interpolation.
-function safeId(value: string): string {
-  if (!/^[A-Za-z0-9_-]{1,64}$/.test(value)) throw new Error(`Unsafe value for GViz query: ${value}`)
-  return value
-}
-
-// query() is for reads only — no _row returned (intentional GSDB design).
-// For mutations use findRow() which goes through all().
-async function query<T = Row>(table: string, sql: string): Promise<T[]> {
+async function byField<T = Row>(table: string, field: string, value: string): Promise<(T & { _row: number })[]> {
   if (!BASE || !APP || !KEY) return []
-  const r = await fetch(`${BASE}/api/${APP}/${table}/query`, {
-    method: 'POST', headers: H(), body: JSON.stringify({ sql }), cache: 'no-store',
+  const r = await fetch(`${BASE}/api/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
+    headers: H(), cache: 'no-store',
   })
   if (!r.ok) return []
-  const data = await r.json()
-  return data.rows ?? data
-}
-
-async function findRow<T>(table: string, predicate: (r: T & { _row: number }) => boolean): Promise<(T & { _row: number }) | null> {
-  const rows = await all<T>(table)
-  return rows.find(predicate) ?? null
+  return r.json()
 }
 
 async function append(table: string, row: Record<string, unknown>): Promise<void> {
   if (!BASE || !APP || !KEY) return
-  const r = await fetch(`${BASE}/api/${APP}/${table}`, {
+  await fetch(`${BASE}/api/${APP}/${table}`, {
     method: 'POST', headers: H(), body: JSON.stringify(row),
   })
-  if (!r.ok) return
 }
 
-async function update(table: string, rowIndex: number, fields: Record<string, unknown>): Promise<void> {
-  const r = await fetch(`${BASE}/api/${APP}/${table}/${rowIndex}`, {
+async function updateByField(table: string, field: string, value: string, fields: Record<string, unknown>): Promise<void> {
+  const r = await fetch(`${BASE}/api/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
     method: 'PATCH', headers: H(), body: JSON.stringify(fields),
   })
-  if (!r.ok) throw new Error(`gsdb PATCH ${table}/${rowIndex} → ${r.status}`)
+  if (!r.ok) throw new Error(`gsdb PATCH ${table}/by/${field}/${value} → ${r.status}`)
 }
 
-async function remove(table: string, rowIndex: number): Promise<void> {
-  const r = await fetch(`${BASE}/api/${APP}/${table}/${rowIndex}`, {
+async function removeByField(table: string, field: string, value: string): Promise<void> {
+  const r = await fetch(`${BASE}/api/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
     method: 'DELETE', headers: H(),
   })
-  if (!r.ok) throw new Error(`gsdb DELETE ${table}/${rowIndex} → ${r.status}`)
+  if (!r.ok) throw new Error(`gsdb DELETE ${table}/by/${field}/${value} → ${r.status}`)
 }
 
 
@@ -103,32 +87,29 @@ export async function getTabs(): Promise<Tab[]> {
 }
 
 export async function getTab(id: string): Promise<Tab | null> {
-  const rows = await query<Tab>('Tabs', `SELECT * WHERE id = '${safeId(id)}'`)
+  const rows = await byField<Tab>('Tabs', 'id', id)
   return rows[0] ? coerceTab(rows[0]) : null
 }
 
 export async function getTabByToken(token: string): Promise<Tab | null> {
-  const rows = await query<Tab>('Tabs', `SELECT * WHERE token = '${safeId(token)}'`)
+  const rows = await byField<Tab>('Tabs', 'token', token)
   return rows[0] ? coerceTab(rows[0]) : null
 }
 
 export async function updateTabStatus(id: string, status: TabStatus) {
-  const r = await findRow<Tab>('Tabs', row => row.id === id)
-  if (!r) return
   const extra = ['CLOSED','PAID','FORGIVEN'].includes(status) ? { closedAt: new Date().toISOString() } : {}
-  await update('Tabs', r._row, { status, ...extra })
+  await updateByField('Tabs', 'id', id, { status, ...extra })
 }
 
 export async function addTabReceiptKey(id: string, fileKey: string) {
-  const r = await findRow<Tab>('Tabs', row => row.id === id)
+  const r = await getTab(id)
   if (!r) return
   const existing = r.receiptFileKeys ?? []
-  await update('Tabs', r._row, { receiptFileKey: JSON.stringify([...existing, fileKey]) })
+  await updateByField('Tabs', 'id', id, { receiptFileKey: JSON.stringify([...existing, fileKey]) })
 }
 
 export async function updateTab(id: string, fields: { recipientName?: string; recipientEmail?: string; notes?: string }) {
-  const r = await findRow<Tab>('Tabs', row => row.id === id)
-  if (r) await update('Tabs', r._row, fields)
+  await updateByField('Tabs', 'id', id, fields)
 }
 
 export interface Item {
@@ -143,31 +124,28 @@ export async function addItem(tabId: string, description: string, amountCents: n
 }
 
 export async function getItems(tabId: string): Promise<Item[]> {
-  const rows = await query<Item>('Items', `SELECT * WHERE tabId = '${safeId(tabId)}'`)
+  const rows = await byField<Item>('Items', 'tabId', tabId)
   return rows.map(r => ({ ...r, amountCents: Number(r.amountCents) }))
 }
 
 export async function deleteItem(itemId: string) {
-  const r = await findRow<Item>('Items', row => row.id === itemId)
-  if (r) await remove('Items', r._row)
+  await removeByField('Items', 'id', itemId)
 }
 
 export async function deleteTab(tabId: string) {
-  const r = await findRow<Tab>('Tabs', row => row.id === tabId)
-  if (r) await remove('Tabs', r._row)
+  await removeByField('Tabs', 'id', tabId)
 }
 
 export async function deleteTabCascade(tabId: string) {
-  const items = await all<Item>('Items')
-  const payments = await all<Payment>('Payments')
-  for (const item of items.filter(i => i.tabId === tabId)) await deleteItem(item.id)
-  for (const payment of payments.filter(p => p.tabId === tabId)) await deletePayment(payment.id)
+  await Promise.all([
+    removeByField('Items', 'tabId', tabId),
+    removeByField('Payments', 'tabId', tabId),
+  ])
   await deleteTab(tabId)
 }
 
 export async function deletePayment(paymentId: string) {
-  const r = await findRow<Payment>('Payments', row => row.id === paymentId)
-  if (r) await remove('Payments', r._row)
+  await removeByField('Payments', 'id', paymentId)
 }
 
 export type Method = 'CASH' | 'ZELLE' | 'OTHER'
@@ -188,7 +166,7 @@ export async function addPayment(p: Omit<Payment, 'id'|'createdAt'|'_row'>): Pro
 }
 
 export async function getPayments(tabId: string): Promise<Payment[]> {
-  const rows = await query<Payment>('Payments', `SELECT * WHERE tabId = '${safeId(tabId)}'`)
+  const rows = await byField<Payment>('Payments', 'tabId', tabId)
   return rows.map(r => ({
     ...r,
     amountCents: Number(r.amountCents),
@@ -197,8 +175,7 @@ export async function getPayments(tabId: string): Promise<Payment[]> {
 }
 
 export async function confirmPayment(paymentId: string) {
-  const r = await findRow<Payment>('Payments', row => row.id === paymentId)
-  if (r) await update('Payments', r._row, { confirmed: 'TRUE' })
+  await updateByField('Payments', 'id', paymentId, { confirmed: 'TRUE' })
 }
 
 function tally(items: Item[], payments: Payment[]) {
