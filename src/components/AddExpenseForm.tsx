@@ -109,14 +109,14 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
         </button>
       </form>
 
-      <div className="p-3 bg-card-hover rounded-lg border border-border">
+        <div className="p-3 bg-card-hover rounded-lg border border-border">
         <p className="text-xs font-medium text-ink-2 mb-2">Or import from receipt</p>
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             ref={receiptRef}
             type="file"
             accept="image/*"
-            className="flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
+            className="w-full sm:flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
           />
           <button
             type="button"
