@@ -157,6 +157,14 @@ export async function deleteTab(tabId: string) {
   if (r) await remove('Tabs', r._row)
 }
 
+export async function deleteTabCascade(tabId: string) {
+  const [items, payments] = await Promise.all([getItems(tabId), getPayments(tabId)])
+  // delete in series — GSDB row indices shift after each removal
+  for (const item of items) await remove('Items', item._row)
+  for (const payment of payments) await remove('Payments', payment._row)
+  await deleteTab(tabId)
+}
+
 export type Method = 'CASH' | 'ZELLE' | 'OTHER'
 
 export interface Payment {

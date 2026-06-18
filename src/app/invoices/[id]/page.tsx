@@ -1,10 +1,12 @@
-import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTab } from '@/lib/db'
+import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade } from '@/lib/db'
 import { appUrl } from '@/lib/url'
 import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/tabs'
+import { sendTabEmail } from '@/lib/email'
 import { AddExpenseForm } from '@/components/AddExpenseForm'
 import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/StatusBadge'
 import { CopyButton } from '@/components/CopyButton'
+import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton'
 import { formatMoney, timeAgo } from '@/lib/utils'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -34,8 +36,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   async function handleDeleteTab() {
     'use server'
     const current = await getTabFull(tab.id)
-    if (!current || current.tab.status !== 'DRAFT') return
-    await deleteTab(tab.id)
+    if (!current || current.tab.status === 'FORGIVEN') return
+    const { tab: t, items, total, balance } = current
+    if (t.status !== 'DRAFT' && t.recipientEmail) {
+      await sendTabEmail({ kind: 'cancelled', tab: t, items, total, balance })
+    }
+    await deleteTabCascade(tab.id)
     redirect('/')
   }
 
@@ -180,7 +186,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {tab.status !== 'PAID' && tab.status !== 'FORGIVEN' && (
+      {tab.status !== 'FORGIVEN' && (
         <div className="flex flex-col sm:flex-row gap-3">
           {tab.status === 'DRAFT' && (
             <form action={handleFinalize} className="flex-1">
@@ -196,18 +202,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               </button>
             </form>
           )}
-          <form action={handleForgive} className="flex-1">
-            <button type="submit" className="w-full py-3 px-4 bg-s-forgiven-bg text-s-forgiven-text font-medium rounded-lg hover:bg-card-hover transition-colors">
-              Forgive this one
-            </button>
-          </form>
-          {tab.status === 'DRAFT' && (
-            <form action={handleDeleteTab}>
-              <button type="submit" className="w-full py-3 px-4 border border-s-confirm-text text-s-confirm-text font-medium rounded-lg hover:bg-s-confirm-bg transition-colors">
-                Delete draft
+          {tab.status !== 'PAID' && (
+            <form action={handleForgive} className="flex-1">
+              <button type="submit" className="w-full py-3 px-4 bg-s-forgiven-bg text-s-forgiven-text font-medium rounded-lg hover:bg-card-hover transition-colors">
+                Forgive this one
               </button>
             </form>
           )}
+          <DeleteInvoiceButton action={handleDeleteTab} isDraft={tab.status === 'DRAFT'} />
         </div>
       )}
 
