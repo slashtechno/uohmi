@@ -63,21 +63,6 @@ async function remove(table: string, rowIndex: number): Promise<void> {
   if (!r.ok) throw new Error(`gsdb DELETE ${table}/${rowIndex} → ${r.status}`)
 }
 
-export async function ensureSchema() {
-  for (const name of ['aiVerdict', 'aiPassed', 'screenshotFileKey']) {
-    await removeColumnIfExists('Payments', name)
-  }
-  const tables: Record<string, string[]> = {
-    Tabs:     ['id','token','recipientName','recipientEmail','status','notes','receiptFileKey','createdAt','closedAt'],
-    Items:    ['id','tabId','description','amountCents','createdAt'],
-    Payments: ['id','tabId','amountCents','method','confirmed','senderNote','createdAt'],
-  }
-  for (const [table, columns] of Object.entries(tables)) {
-    await fetch(`${BASE}/api/${APP}/${table}/schema`, {
-      method: 'PUT', headers: H(), body: JSON.stringify({ columns }),
-    })
-  }
-}
 
 export type TabStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'PAID' | 'FORGIVEN'
 
