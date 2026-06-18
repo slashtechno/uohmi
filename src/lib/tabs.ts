@@ -19,6 +19,18 @@ export async function addItemAndNotify(tabId: string, description: string, amoun
   }
 }
 
+export async function addItemsBulkAndNotify(tabId: string, items: { description: string; amountCents: number }[]) {
+  for (const { description, amountCents } of items) {
+    await db.addItem(tabId, description, amountCents)
+  }
+  const full = await db.getTabFull(tabId)
+  if (!full) return
+  if (full.tab.status === 'OPEN') {
+    const summary = items.map(i => i.description).join(', ')
+    await sendTabEmail({ kind: 'item-added', ...full, latest: summary })
+  }
+}
+
 export async function finalizeTab(tabId: string) {
   await db.updateTabStatus(tabId, 'CLOSED')
   const full = await db.getTabFull(tabId)

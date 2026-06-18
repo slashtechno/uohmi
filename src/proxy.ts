@@ -1,20 +1,47 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export default function proxy(request: NextRequest) {
-  const sessionCookie = request.cookies.get('uohmi_session')
-  const { pathname } = request.nextUrl
-  const isPublic = pathname.startsWith('/pay') || pathname.startsWith('/api/payments') || pathname.startsWith('/api/auth') || pathname === '/login' || pathname.startsWith('/api/public')
+const COOKIE = 'uohmi_session'
 
-  if (!isPublic && !sessionCookie) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  if (pathname === '/login' && sessionCookie) {
-    return NextResponse.redirect(new URL('/', request.url))
-  }
-
-  return NextResponse.next()
+function isPublic(pathname: string): boolean {
+  return (
+    pathname === '/login' ||
+    pathname.startsWith('/pay/') ||
+    pathname.startsWith('/api/public/') ||
+    pathname === '/api/auth/login' ||
+    pathname === '/api/payments'  // payer POST; /api/payments/*/confirm is admin-only
+  )
 }
 
-export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico|sw.js|icons).*)'] }
+function isAuthenticated(req: NextRequest): boolean {
+  const expected = process.env.SESSION_SECRET
+  if (!expected) return false  // fail closed if misconfigured
+  const session = req.cookies.get(COOKIE)?.value
+  return !!session && session === expected
+}
+
+export function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl
+  const authed = isAuthenticated(req)
+
+  // Redirect authenticated users away from /login
+  if (pathname === '/login' && authed) {
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
+  if (isPublic(pathname)) return NextResponse.next()
+
+  if (authed) return NextResponse.next()
+
+  // API routes: return 401 instead of an HTML redirect
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const loginUrl = new URL('/login', req.url)
+  loginUrl.searchParams.set('next', pathname)
+  return NextResponse.redirect(loginUrl)
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|icons).*)'],
+}

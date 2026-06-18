@@ -8,26 +8,10 @@ const H = (extra?: Record<string, string>) => ({
   ...extra,
 })
 
-let schemaEnsured = false
-
-async function ensureSchemaOnce() {
-  if (schemaEnsured || !BASE || !APP || !KEY) return
-  try {
-    await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Tabs' }) })
-    await fetch(`${BASE}/api/${APP}/Tabs/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','token','recipientName','recipientEmail','status','notes','receiptFileKey','createdAt','closedAt'] }) })
-    await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Items' }) })
-    await fetch(`${BASE}/api/${APP}/Items/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','tabId','description','amountCents','createdAt'] }) })
-    await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Payments' }) })
-    await fetch(`${BASE}/api/${APP}/Payments/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','tabId','amountCents','method','confirmed','aiVerdict','aiPassed','screenshotFileKey','senderNote','createdAt'] }) })
-    schemaEnsured = true
-  } catch {}
-}
-
 type Row = Record<string, any> & { _row: number }
 
 async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
   if (!BASE || !APP || !KEY) return []
-  await ensureSchemaOnce()
   const r = await fetch(`${BASE}/api/${APP}/${table}`, { headers: H(), cache: 'no-store' })
   if (!r.ok) return []
   return r.json()
@@ -80,10 +64,13 @@ async function remove(table: string, rowIndex: number): Promise<void> {
 }
 
 export async function ensureSchema() {
+  for (const name of ['aiVerdict', 'aiPassed', 'screenshotFileKey']) {
+    await removeColumnIfExists('Payments', name)
+  }
   const tables: Record<string, string[]> = {
     Tabs:     ['id','token','recipientName','recipientEmail','status','notes','receiptFileKey','createdAt','closedAt'],
     Items:    ['id','tabId','description','amountCents','createdAt'],
-    Payments: ['id','tabId','amountCents','method','confirmed','aiVerdict','aiPassed','screenshotFileKey','senderNote','createdAt'],
+    Payments: ['id','tabId','amountCents','method','confirmed','senderNote','createdAt'],
   }
   for (const [table, columns] of Object.entries(tables)) {
     await fetch(`${BASE}/api/${APP}/${table}/schema`, {
@@ -181,8 +168,7 @@ export type Method = 'CASH' | 'ZELLE' | 'OTHER'
 
 export interface Payment {
   id: string; tabId: string; amountCents: number; method: Method
-  confirmed: boolean; aiVerdict?: string; aiPassed?: boolean
-  screenshotFileKey?: string; senderNote?: string; createdAt: string; _row: number
+  confirmed: boolean; senderNote?: string; createdAt: string; _row: number
 }
 
 export async function addPayment(p: Omit<Payment, 'id'|'createdAt'|'_row'>): Promise<Payment> {
@@ -190,7 +176,6 @@ export async function addPayment(p: Omit<Payment, 'id'|'createdAt'|'_row'>): Pro
   const row = {
     ...p, id: nanoid(10), createdAt: new Date().toISOString(),
     confirmed: String(p.confirmed).toUpperCase(),
-    aiPassed: p.aiPassed === undefined ? '' : String(p.aiPassed).toUpperCase(),
   }
   await append('Payments', row as any)
   return { ...p, id: row.id, createdAt: row.createdAt, _row: -1 }
@@ -202,7 +187,6 @@ export async function getPayments(tabId: string): Promise<Payment[]> {
     ...r,
     amountCents: Number(r.amountCents),
     confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
-    aiPassed: r.aiPassed ? String(r.aiPassed).toUpperCase() === 'TRUE' : undefined,
   }))
 }
 
@@ -231,7 +215,6 @@ export async function getTabsFull() {
       ...r,
       amountCents: Number(r.amountCents),
       confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
-      aiPassed: r.aiPassed ? String(r.aiPassed).toUpperCase() === 'TRUE' : undefined,
     })) as Payment[]
     return { tab, items, payments, ...tally(items, payments) }
   })

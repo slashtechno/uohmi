@@ -1,8 +1,8 @@
-import { getTabFull, updateTabStatus, updateTab, addItem, deleteItem, deleteTab } from '@/lib/db'
-import { confirmPaymentAndMaybeClose, addItemAndNotify, sendReminder, finalizeTab } from '@/lib/tabs'
+import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTab } from '@/lib/db'
+import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/tabs'
+import { AddExpenseForm } from '@/components/AddExpenseForm'
 import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/StatusBadge'
-import { StoredImage } from '@/components/StoredImage'
 import { CopyButton } from '@/components/CopyButton'
 import { formatMoney, timeAgo } from '@/lib/utils'
 import Link from 'next/link'
@@ -27,6 +27,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     const stillEditable = current.tab.status === 'DRAFT' || (current.tab.status === 'OPEN' && current.payments.length === 0)
     if (!itemBelongsHere || !stillEditable) return
     await deleteItem(itemId)
+    redirect(`/invoices/${tab.id}`)
   }
 
   async function handleDeleteTab() {
@@ -145,9 +146,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           ))}
         </div>
 
-        {tab.status === 'OPEN' && (
-          <AddExpenseForm tabId={tab.id} />
-        )}
+        {tab.status === 'OPEN' && <AddExpenseForm tabId={tab.id} />}
       </div>
 
       {payments.length > 0 && (
@@ -240,6 +239,7 @@ async function PaymentCard({ payment, tabId }: { payment: any; tabId: string }) 
   async function handleConfirm() {
     'use server'
     await confirmPaymentAndMaybeClose(payment.id, tabId)
+    redirect(`/invoices/${tabId}`)
   }
 
   return (
@@ -258,20 +258,6 @@ async function PaymentCard({ payment, tabId }: { payment: any; tabId: string }) 
         <p className="text-sm text-ink-2 italic mb-2">"{payment.senderNote}"</p>
       )}
 
-      {payment.aiVerdict && (
-        <div className="bg-card-hover rounded p-2 mb-2">
-          <p className="text-xs text-ink-2">
-            AI: {payment.aiVerdict} {payment.aiPassed ? '✓' : '✕'}
-          </p>
-        </div>
-      )}
-
-      {payment.screenshotFileKey && (
-        <div className="mb-2">
-          <StoredImage fileKey={payment.screenshotFileKey} alt="Payment screenshot" className="max-h-48" />
-        </div>
-      )}
-
       {!payment.confirmed && (
         <form action={handleConfirm}>
           <button type="submit" className="w-full py-2 px-3 bg-s-paid-bg text-s-paid-text text-sm font-medium rounded-lg hover:bg-s-paid-bg/80 transition-colors">
@@ -283,38 +269,3 @@ async function PaymentCard({ payment, tabId }: { payment: any; tabId: string }) 
   )
 }
 
-async function AddExpenseForm({ tabId }: { tabId: string }) {
-  async function handleAdd(formData: FormData) {
-    'use server'
-    const description = formData.get('description') as string
-    const amountCents = Math.round(parseFloat(formData.get('amountCents') as string) * 100)
-    await addItemAndNotify(tabId, description, amountCents)
-  }
-
-  return (
-    <form action={handleAdd} className="mt-4 pt-4 border-t border-border space-y-3">
-      <h3 className="text-sm font-medium text-ink-2">Add expense</h3>
-      <div className="flex gap-2">
-        <input
-          name="description"
-          type="text"
-          placeholder="What was this for?"
-          required
-          className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm"
-        />
-        <input
-          name="amountCents"
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="$0.00"
-          required
-          className="w-24 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm text-right"
-        />
-        <button type="submit" className="px-4 py-2 bg-accent text-white text-sm font-medium rounded-lg hover:bg-accent-dark transition-colors">
-          Add
-        </button>
-      </div>
-    </form>
-  )
-}

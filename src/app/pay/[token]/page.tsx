@@ -33,7 +33,6 @@ export default function PayPage() {
   const [method, setMethod] = useState<string>('')
   const [amount, setAmount] = useState('')
   const [senderNote, setSenderNote] = useState('')
-  const [screenshot, setScreenshot] = useState<File | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
@@ -58,35 +57,19 @@ export default function PayPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!method || !amount || !data) return
+    if (!method || !data) return
+    const effectiveAmount = amount || (Math.max(0, balance) / 100).toFixed(2)
 
     setSubmitting(true)
     try {
-      let screenshotBase64 = ''
-      let screenshotMediaType = ''
-
-      if (screenshot) {
-        const reader = new FileReader()
-        screenshotBase64 = await new Promise<string>((resolve) => {
-          reader.onload = () => {
-            const result = reader.result as string
-            resolve(result.split(',')[1])
-          }
-          reader.readAsDataURL(screenshot)
-        })
-        screenshotMediaType = screenshot.type
-      }
-
       const res = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tabId: data.tab.id,
-          amountCents: Math.round(parseFloat(amount) * 100),
+          amountCents: Math.round(parseFloat(effectiveAmount) * 100),
           method,
           senderNote,
-          screenshotBase64,
-          screenshotMediaType,
         }),
       })
 
@@ -220,14 +203,13 @@ export default function PayPage() {
             ))}
           </div>
 
-          {method === 'CASH' && (
-            <div className="bg-s-draft-bg rounded-lg p-3 animate-fade-in">
-              <p className="text-s-draft-text text-sm">Classic. Untraceable. We like it.</p>
-            </div>
-          )}
-
-          {method && method !== 'CASH' && (
+          {method && (
             <div className="animate-fade-in">
+              {method === 'CASH' && (
+                <div className="bg-s-draft-bg rounded-lg p-3 mb-3">
+                  <p className="text-s-draft-text text-sm">Classic. Untraceable. We like it.</p>
+                </div>
+              )}
               <label htmlFor="amount" className="block text-sm font-medium text-ink-2 mb-1">
                 Amount
               </label>
@@ -240,21 +222,6 @@ export default function PayPage() {
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder={`$${(Math.max(0, balance) / 100).toFixed(2)}`}
                 className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
-              />
-            </div>
-          )}
-
-          {method && method !== 'CASH' && (
-            <div className="animate-fade-in">
-              <label htmlFor="screenshot" className="block text-sm font-medium text-ink-2 mb-1">
-                Screenshot (optional, this will be analyzed with AI)
-              </label>
-              <input
-                id="screenshot"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setScreenshot(e.target.files?.[0] || null)}
-                className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80"
               />
             </div>
           )}
