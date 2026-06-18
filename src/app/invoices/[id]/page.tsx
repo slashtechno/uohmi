@@ -1,7 +1,9 @@
-import { getTabFull, updateTabStatus, addItem } from '@/lib/db'
-import { confirmPaymentAndMaybeClose, addItemAndNotify } from '@/lib/tabs'
+import { getTabFull, updateTabStatus, updateTab, addItem, deleteItem, deleteTab } from '@/lib/db'
+import { confirmPaymentAndMaybeClose, addItemAndNotify, sendReminder, finalizeTab } from '@/lib/tabs'
+import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/StatusBadge'
 import { StoredImage } from '@/components/StoredImage'
+import { CopyButton } from '@/components/CopyButton'
 import { formatMoney, timeAgo } from '@/lib/utils'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -14,6 +16,66 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!full) notFound()
 
   const { tab, items, payments, total, confirmedPaid, balance, hasUnconfirmed } = full
+
+  const canEditItems = tab.status === 'DRAFT' || (tab.status === 'OPEN' && payments.length === 0)
+
+  async function handleDeleteItem(itemId: string) {
+    'use server'
+    const current = await getTabFull(tab.id)
+    if (!current) return
+    const itemBelongsHere = current.items.some(i => i.id === itemId)
+    const stillEditable = current.tab.status === 'DRAFT' || (current.tab.status === 'OPEN' && current.payments.length === 0)
+    if (!itemBelongsHere || !stillEditable) return
+    await deleteItem(itemId)
+  }
+
+  async function handleDeleteTab() {
+    'use server'
+    const current = await getTabFull(tab.id)
+    if (!current || current.tab.status !== 'DRAFT') return
+    await deleteTab(tab.id)
+    redirect('/')
+  }
+
+  async function handleEditDetails(formData: FormData) {
+    'use server'
+    const current = await getTabFull(tab.id)
+    if (!current || !['DRAFT', 'OPEN'].includes(current.tab.status)) return
+    await updateTab(tab.id, {
+      recipientName: formData.get('recipientName') as string,
+      recipientEmail: formData.get('recipientEmail') as string,
+      notes: formData.get('notes') as string,
+    })
+    redirect(`/invoices/${tab.id}`)
+  }
+
+  async function handleSendReminder() {
+    'use server'
+    const current = await getTabFull(tab.id)
+    if (!current || !['OPEN', 'CLOSED'].includes(current.tab.status)) return
+    await sendReminder(tab.id)
+    redirect(`/invoices/${tab.id}`)
+  }
+
+  async function handleFinalize() {
+    'use server'
+    const current = await getTabFull(tab.id)
+    if (!current || current.tab.status !== 'DRAFT') return
+    await finalizeTab(tab.id)
+    redirect(`/invoices/${tab.id}`)
+  }
+
+  async function handleForgive() {
+    'use server'
+    const current = await getTabFull(tab.id)
+    if (!current || ['PAID', 'FORGIVEN'].includes(current.tab.status)) return
+    await updateTabStatus(tab.id, 'FORGIVEN')
+    redirect(`/invoices/${tab.id}`)
+  }
+
+  const payUrl = `${process.env.NEXT_PUBLIC_APP_URL}/pay/${tab.token}`
+  const canEdit = tab.status === 'DRAFT' || tab.status === 'OPEN'
+  const canRemind = tab.status === 'OPEN' || tab.status === 'CLOSED'
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
@@ -33,6 +95,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         {tab.notes && (
           <div className="bg-accent-bg rounded-lg p-3 mb-4">
             <p className="text-accent-dark text-sm italic">"{tab.notes}"</p>
+          </div>
+        )}
+
+        {tab.status !== 'DRAFT' && (
+          <div className="flex items-center gap-2 mb-4 p-2 bg-card-hover rounded-lg">
+            <span className="text-xs text-ink-3 truncate flex-1 font-mono">{payUrl}</span>
+            <CopyButton text={payUrl} />
           </div>
         )}
 
@@ -60,9 +129,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <h2 className="text-lg font-medium text-ink mb-4">Items ({items.length})</h2>
         <div className="space-y-2">
           {items.map((item) => (
-            <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0">
+            <div key={item.id} className="flex justify-between items-center py-2 border-b border-border last:border-0 group">
               <span className="text-ink">{item.description}</span>
-              <span className="text-ink-2">{formatMoney(item.amountCents)}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-ink-2">{formatMoney(item.amountCents)}</span>
+                {canEditItems && (
+                  <form action={handleDeleteItem.bind(null, item.id)}>
+                    <button type="submit" className="text-ink-3 hover:text-s-confirm-text transition-colors opacity-0 group-hover:opacity-100" aria-label="Delete item">
+                      ✕
+                    </button>
+                  </form>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -83,22 +161,53 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
+      {canEdit && (
+        <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
+          <h2 className="text-sm font-medium text-ink-2 mb-3">Edit details</h2>
+          <form action={handleEditDetails} className="space-y-3">
+            <div className="flex gap-2">
+              <input name="recipientName" defaultValue={tab.recipientName} placeholder="Name" required
+                className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm" />
+              <input name="recipientEmail" type="email" defaultValue={tab.recipientEmail} placeholder="Email" required
+                className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm" />
+            </div>
+            <input name="notes" defaultValue={tab.notes ?? ''} placeholder="Note (optional)"
+              className="w-full px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm" />
+            <button type="submit" className="px-4 py-2 bg-card border border-border text-ink text-sm font-medium rounded-lg hover:bg-card-hover transition-colors">
+              Save
+            </button>
+          </form>
+        </div>
+      )}
+
       {tab.status !== 'PAID' && tab.status !== 'FORGIVEN' && (
         <div className="flex flex-col sm:flex-row gap-3">
           {tab.status === 'DRAFT' && (
-            <>
-              <form action={`/api/tabs/${tab.id}/finalize`} method="POST" className="flex-1">
-                <button type="submit" className="w-full py-3 px-4 bg-accent text-white font-medium rounded-lg hover:bg-accent-dark transition-colors">
-                  Finalize & send
-                </button>
-              </form>
-            </>
+            <form action={handleFinalize} className="flex-1">
+              <button type="submit" className="w-full py-3 px-4 bg-accent text-white font-medium rounded-lg hover:bg-accent-dark transition-colors">
+                Finalize & send
+              </button>
+            </form>
           )}
-          <form action={`/api/tabs/${tab.id}/forgive`} method="POST" className="flex-1">
+          {canRemind && (
+            <form action={handleSendReminder} className="flex-1">
+              <button type="submit" className="w-full py-3 px-4 bg-card border border-border text-ink font-medium rounded-lg hover:bg-card-hover transition-colors">
+                Send reminder
+              </button>
+            </form>
+          )}
+          <form action={handleForgive} className="flex-1">
             <button type="submit" className="w-full py-3 px-4 bg-s-forgiven-bg text-s-forgiven-text font-medium rounded-lg hover:bg-card-hover transition-colors">
               Forgive this one
             </button>
           </form>
+          {tab.status === 'DRAFT' && (
+            <form action={handleDeleteTab}>
+              <button type="submit" className="w-full py-3 px-4 border border-s-confirm-text text-s-confirm-text font-medium rounded-lg hover:bg-s-confirm-bg transition-colors">
+                Delete draft
+              </button>
+            </form>
+          )}
         </div>
       )}
 

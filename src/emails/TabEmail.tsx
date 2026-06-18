@@ -1,7 +1,7 @@
 import { Html, Head, Body, Container, Section, Text, Button, Hr } from 'react-email'
 
 interface TabEmailProps {
-  kind: 'opened' | 'item-added' | 'finalized'
+  kind: 'opened' | 'item-added' | 'finalized' | 'reminder'
   tab: { recipientName: string; notes?: string }
   items: { description: string; amountCents: number }[]
   total: number
@@ -16,11 +16,13 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
     opened: "a running tab, from your conscience",
     'item-added': `uohmi update — running total: ${format(total)}`,
     finalized: `the final tally: ${format(total)}`,
+    reminder: `friendly reminder — you still owe ${format(total)}`,
   }
   const preheaders: Record<typeof kind, string> = {
     opened: "I'll add expenses as they come. Pay now or whenever.",
     'item-added': `Just added: ${latest}. Running total below.`,
     finalized: "That's everything. Pay when you can. I'm watching.",
+    reminder: "Just checking in. The debt remains.",
   }
 
   return (

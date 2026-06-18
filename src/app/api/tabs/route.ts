@@ -4,13 +4,13 @@ import { sendTab, finalizeTab } from '@/lib/tabs'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { recipientName, recipientEmail, isRunning, notes, items, receiptBase64, receiptMediaType, finalize } = body
+  const { recipientName, recipientEmail, notes, items, receiptBase64, receiptMediaType, finalize } = body
 
   if (!recipientName || !recipientEmail) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const tab = await createTab({ recipientName, recipientEmail, isRunning, notes })
+  const tab = await createTab({ recipientName, recipientEmail, notes })
 
   if (items && items.length > 0) {
     for (const item of items) {

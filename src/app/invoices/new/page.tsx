@@ -6,7 +6,6 @@ export default function NewInvoicePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [isRunning, setIsRunning] = useState(true)
   const [items, setItems] = useState([{ description: '', amountCents: 0 }])
   const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
@@ -51,7 +50,6 @@ export default function NewInvoicePage() {
         body: JSON.stringify({
           recipientName,
           recipientEmail,
-          isRunning,
           notes,
           items: items.filter(i => i.description && i.amountCents > 0),
           finalize,
@@ -102,19 +100,6 @@ export default function NewInvoicePage() {
               placeholder="friend@example.com"
               className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
             />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <input
-              id="isRunning"
-              type="checkbox"
-              checked={isRunning}
-              onChange={(e) => setIsRunning(e.target.checked)}
-              className="w-4 h-4 text-accent border-border rounded focus:ring-accent"
-            />
-            <label htmlFor="isRunning" className="text-sm text-ink-2">
-              Running tab (keep adding expenses later)
-            </label>
           </div>
 
           <div>
@@ -189,7 +174,7 @@ export default function NewInvoicePage() {
             disabled={loading}
             className="flex-1 py-3 px-4 bg-card border border-border text-ink font-medium rounded-lg hover:bg-card-hover focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Sending...' : 'Send (running tab)'}
+            {loading ? 'Sending...' : 'Send & keep open'}
           </button>
           <button
             onClick={() => handleSubmit(true)}

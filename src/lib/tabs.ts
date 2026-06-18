@@ -31,3 +31,10 @@ export async function confirmPaymentAndMaybeClose(paymentId: string, tabId: stri
   const full = await db.getTabFull(tabId)
   if (full && full.balance <= 0) await db.updateTabStatus(tabId, 'PAID')
 }
+
+export async function sendReminder(tabId: string) {
+  const full = await db.getTabFull(tabId)
+  if (!full) return
+  await sendTabEmail({ kind: 'reminder', ...full })
+  await notifications.tabSent(full.tab.recipientName, false)
+}

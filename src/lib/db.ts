@@ -14,7 +14,7 @@ async function ensureSchemaOnce() {
   if (schemaEnsured || !BASE || !APP || !KEY) return
   try {
     await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Tabs' }) })
-    await fetch(`${BASE}/api/${APP}/Tabs/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','token','recipientName','recipientEmail','status','isRunning','notes','receiptFileKey','createdAt','closedAt'] }) })
+    await fetch(`${BASE}/api/${APP}/Tabs/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','token','recipientName','recipientEmail','status','notes','receiptFileKey','createdAt','closedAt'] }) })
     await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Items' }) })
     await fetch(`${BASE}/api/${APP}/Items/schema`, { method: 'PUT', headers: H(), body: JSON.stringify({ columns: ['id','tabId','description','amountCents','createdAt'] }) })
     await fetch(`${BASE}/api/${APP}/Tables`, { method: 'POST', headers: H(), body: JSON.stringify({ table: 'Payments' }) })
@@ -40,7 +40,9 @@ function safeId(value: string): string {
   return value
 }
 
-async function query<T = Row>(table: string, sql: string): Promise<(T & { _row: number })[]> {
+// query() is for reads only — no _row returned (intentional GSDB design).
+// For mutations use findRow() which goes through all().
+async function query<T = Row>(table: string, sql: string): Promise<T[]> {
   if (!BASE || !APP || !KEY) return []
   const r = await fetch(`${BASE}/api/${APP}/${table}/query`, {
     method: 'POST', headers: H(), body: JSON.stringify({ sql }), cache: 'no-store',
@@ -48,6 +50,11 @@ async function query<T = Row>(table: string, sql: string): Promise<(T & { _row: 
   if (!r.ok) return []
   const data = await r.json()
   return data.rows ?? data
+}
+
+async function findRow<T>(table: string, predicate: (r: T & { _row: number }) => boolean): Promise<(T & { _row: number }) | null> {
+  const rows = await all<T>(table)
+  return rows.find(predicate) ?? null
 }
 
 async function append(table: string, row: Record<string, unknown>): Promise<void> {
@@ -74,7 +81,7 @@ async function remove(table: string, rowIndex: number): Promise<void> {
 
 export async function ensureSchema() {
   const tables: Record<string, string[]> = {
-    Tabs:     ['id','token','recipientName','recipientEmail','status','isRunning','notes','receiptFileKey','createdAt','closedAt'],
+    Tabs:     ['id','token','recipientName','recipientEmail','status','notes','receiptFileKey','createdAt','closedAt'],
     Items:    ['id','tabId','description','amountCents','createdAt'],
     Payments: ['id','tabId','amountCents','method','confirmed','aiVerdict','aiPassed','screenshotFileKey','senderNote','createdAt'],
   }
@@ -90,25 +97,24 @@ export type TabStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'PAID' | 'FORGIVEN'
 export interface Tab {
   id: string; token: string
   recipientName: string; recipientEmail: string
-  status: TabStatus; isRunning: boolean
+  status: TabStatus
   notes?: string; receiptFileKey?: string
   createdAt: string; closedAt?: string
   _row: number
 }
 
 function coerceTab(r: any): Tab {
-  return { ...r, isRunning: String(r.isRunning).toUpperCase() === 'TRUE' }
+  return r as Tab
 }
 
 export async function createTab(input: {
-  recipientName: string; recipientEmail: string; isRunning: boolean; notes?: string
+  recipientName: string; recipientEmail: string; notes?: string
 }): Promise<Tab> {
   const { nanoid } = await import('nanoid')
   const tab = {
     id: nanoid(10), token: nanoid(16), status: 'DRAFT' as TabStatus,
     createdAt: new Date().toISOString(),
     ...input,
-    isRunning: String(input.isRunning).toUpperCase(),
   }
   await append('Tabs', tab as any)
   return coerceTab({ ...tab, _row: -1 })
@@ -129,16 +135,20 @@ export async function getTabByToken(token: string): Promise<Tab | null> {
 }
 
 export async function updateTabStatus(id: string, status: TabStatus) {
-  const rows = await query<Tab>('Tabs', `SELECT * WHERE id = '${safeId(id)}'`)
-  const r = rows[0]
+  const r = await findRow<Tab>('Tabs', row => row.id === id)
   if (!r) return
   const extra = ['CLOSED','PAID','FORGIVEN'].includes(status) ? { closedAt: new Date().toISOString() } : {}
   await update('Tabs', r._row, { status, ...extra })
 }
 
 export async function setTabReceiptKey(id: string, fileKey: string) {
-  const rows = await query<Tab>('Tabs', `SELECT * WHERE id = '${safeId(id)}'`)
-  if (rows[0]) await update('Tabs', rows[0]._row, { receiptFileKey: fileKey })
+  const r = await findRow<Tab>('Tabs', row => row.id === id)
+  if (r) await update('Tabs', r._row, { receiptFileKey: fileKey })
+}
+
+export async function updateTab(id: string, fields: { recipientName?: string; recipientEmail?: string; notes?: string }) {
+  const r = await findRow<Tab>('Tabs', row => row.id === id)
+  if (r) await update('Tabs', r._row, fields)
 }
 
 export interface Item {
@@ -158,8 +168,13 @@ export async function getItems(tabId: string): Promise<Item[]> {
 }
 
 export async function deleteItem(itemId: string) {
-  const rows = await query<Item>('Items', `SELECT * WHERE id = '${safeId(itemId)}'`)
-  if (rows[0]) await remove('Items', rows[0]._row)
+  const r = await findRow<Item>('Items', row => row.id === itemId)
+  if (r) await remove('Items', r._row)
+}
+
+export async function deleteTab(tabId: string) {
+  const r = await findRow<Tab>('Tabs', row => row.id === tabId)
+  if (r) await remove('Tabs', r._row)
 }
 
 export type Method = 'CASH' | 'ZELLE' | 'OTHER'
@@ -192,8 +207,8 @@ export async function getPayments(tabId: string): Promise<Payment[]> {
 }
 
 export async function confirmPayment(paymentId: string) {
-  const rows = await query<Payment>('Payments', `SELECT * WHERE id = '${safeId(paymentId)}'`)
-  if (rows[0]) await update('Payments', rows[0]._row, { confirmed: 'TRUE' })
+  const r = await findRow<Payment>('Payments', row => row.id === paymentId)
+  if (r) await update('Payments', r._row, { confirmed: 'TRUE' })
 }
 
 function tally(items: Item[], payments: Payment[]) {

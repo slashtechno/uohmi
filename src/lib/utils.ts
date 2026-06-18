@@ -12,16 +12,16 @@ export function statusBadge(status: TabStatus, hasUnconfirmed?: boolean) {
     PAID:     { bg: 'bg-s-paid-bg',     text: 'text-s-paid-text',     label: 'Paid ✓' },
     FORGIVEN: { bg: 'bg-s-forgiven-bg', text: 'text-s-forgiven-text', label: 'Forgiven (ugh)' },
   }
-  const base = badges[status]
   if (hasUnconfirmed) {
     return { bg: 'bg-s-confirm-bg', text: 'text-s-confirm-text', label: 'Payment to confirm' }
   }
-  return base
+  return badges[status] ?? { bg: 'bg-s-draft-bg', text: 'text-s-draft-text', label: status ?? '?' }
 }
 
 export function timeAgo(date: string): string {
   const now = Date.now()
   const then = new Date(date).getTime()
+  if (!date || isNaN(then)) return 'some time ago'
   const diff = now - then
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
