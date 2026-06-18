@@ -158,15 +158,16 @@ export async function deleteTab(tabId: string) {
 }
 
 export async function deleteTabCascade(tabId: string) {
-  const [allItems, allPayments] = await Promise.all([all<Item>('Items'), all<Payment>('Payments')])
-  const items = allItems.filter(i => i.tabId === tabId)
-  const payments = allPayments.filter(p => p.tabId === tabId)
-  // delete in series descending — GSDB row indices shift after each removal
-  items.sort((a, b) => b._row - a._row)
-  payments.sort((a, b) => b._row - a._row)
-  for (const item of items) await remove('Items', item._row)
-  for (const payment of payments) await remove('Payments', payment._row)
+  const items = await all<Item>('Items')
+  const payments = await all<Payment>('Payments')
+  for (const item of items.filter(i => i.tabId === tabId)) await deleteItem(item.id)
+  for (const payment of payments.filter(p => p.tabId === tabId)) await deletePayment(payment.id)
   await deleteTab(tabId)
+}
+
+export async function deletePayment(paymentId: string) {
+  const r = await findRow<Payment>('Payments', row => row.id === paymentId)
+  if (r) await remove('Payments', r._row)
 }
 
 export type Method = 'CASH' | 'ZELLE' | 'OTHER'
