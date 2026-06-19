@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { ReceiptImportField } from './ReceiptImportField'
 
 type ParsedItem = { description: string; amountCents: number }
 
@@ -9,10 +10,8 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState('')
   const [adding, setAdding] = useState(false)
-  const [parsing, setParsing] = useState(false)
   const [preview, setPreview] = useState<ParsedItem[] | null>(null)
   const [error, setError] = useState('')
-  const receiptRef = useRef<HTMLInputElement>(null)
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -36,26 +35,6 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
     }
   }
 
-  async function handleParseReceipt() {
-    const file = receiptRef.current?.files?.[0]
-    if (!file) return
-    setParsing(true)
-    setError('')
-    setPreview(null)
-    try {
-      const form = new FormData()
-      form.append('receipt', file)
-      const res = await fetch('/api/receipts/parse', { method: 'POST', body: form })
-      if (!res.ok) throw new Error()
-      const { items } = await res.json()
-      setPreview(items)
-    } catch {
-      setError('Could not parse receipt.')
-    } finally {
-      setParsing(false)
-    }
-  }
-
   async function handleImportAll() {
     if (!preview?.length) return
     setAdding(true)
@@ -68,7 +47,6 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
       })
       if (!res.ok) throw new Error()
       setPreview(null)
-      if (receiptRef.current) receiptRef.current.value = ''
       router.refresh()
     } catch {
       setError('Failed to import items.')
@@ -109,25 +87,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
         </button>
       </form>
 
-        <div className="p-3 bg-card-hover rounded-lg border border-border">
-        <p className="text-xs font-medium text-ink-2 mb-2">Or import from receipt</p>
-        <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
-          <input
-            ref={receiptRef}
-            type="file"
-            accept="image/*"
-            className="min-w-0 w-full sm:flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
-          />
-          <button
-            type="button"
-            onClick={handleParseReceipt}
-            disabled={parsing}
-            className="w-full sm:w-auto px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-md hover:bg-accent-dark disabled:opacity-50 transition-colors whitespace-nowrap"
-          >
-            {parsing ? 'Parsing...' : 'Parse receipt'}
-          </button>
-        </div>
-      </div>
+        <ReceiptImportField onParsed={(items) => { setError(''); setPreview(items) }} />
 
       {preview && (
         <div className="border border-border rounded-lg overflow-hidden">

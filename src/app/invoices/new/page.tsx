@@ -1,36 +1,16 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { ReceiptImportField } from '@/components/ReceiptImportField'
 
 export default function NewInvoicePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [parsing, setParsing] = useState(false)
   const [error, setError] = useState('')
   const [items, setItems] = useState([{ description: '', amountCents: 0 }])
   const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [notes, setNotes] = useState('')
-  const receiptInputRef = useRef<HTMLInputElement>(null)
-
-  async function parseReceipt() {
-    const file = receiptInputRef.current?.files?.[0]
-    if (!file) return
-    setParsing(true)
-    setError('')
-    try {
-      const form = new FormData()
-      form.append('receipt', file)
-      const res = await fetch('/api/receipts/parse', { method: 'POST', body: form })
-      if (!res.ok) throw new Error()
-      const { items: parsed } = await res.json()
-      if (parsed?.length) setItems(parsed)
-    } catch {
-      setError('Could not parse receipt. Add items manually.')
-    } finally {
-      setParsing(false)
-    }
-  }
 
   function addItem() {
     setItems([...items, { description: '', amountCents: 0 }])
@@ -138,24 +118,8 @@ export default function NewInvoicePage() {
           </div>
         </div>
 
-        <div className="mb-4 p-3 bg-card-hover rounded-lg border border-border">
-          <p className="text-xs font-medium text-ink-2 mb-2">Import from receipt</p>
-          <div className="flex gap-2">
-            <input
-              ref={receiptInputRef}
-              type="file"
-              accept="image/*"
-              className="flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
-            />
-            <button
-              type="button"
-              onClick={parseReceipt}
-              disabled={parsing}
-              className="px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-md hover:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
-            >
-              {parsing ? 'Parsing...' : 'Parse receipt'}
-            </button>
-          </div>
+        <div className="mb-4">
+          <ReceiptImportField onParsed={(parsed) => { if (parsed?.length) setItems(parsed) }} />
         </div>
 
         <div className="mb-6">
