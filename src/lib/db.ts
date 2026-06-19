@@ -64,7 +64,8 @@ export interface Tab {
   _row: number
 }
 
-function coerceTab(r: Record<string, unknown>): Tab {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function coerceTab(r: any): Tab {
   const raw = r.receiptFileKeys
   let receiptFileKeys: string[] | undefined
   if (typeof raw === 'string' && raw.length > 0) {
