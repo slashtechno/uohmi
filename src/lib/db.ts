@@ -11,11 +11,12 @@ const H = (extra?: Record<string, string>) => ({
 type Row = Record<string, any> & { _row: number }
 
 async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
-  if (!BASE || !APP || !KEY) return []
+  if (!BASE || !APP || !KEY) throw new Error(`gsdb: missing config (BASE/APP/KEY)`)
   const r = await fetch(`${BASE}/api/${APP}/${table}`, { headers: H(), cache: 'no-store' })
-  if (!r.ok) return []
+  if (!r.ok) throw new Error(`gsdb GET ${table} → ${r.status}`)
   const data = await r.json()
-  return Array.isArray(data) ? data : []
+  if (!Array.isArray(data)) throw new Error(`gsdb GET ${table}: expected array, got ${typeof data}`)
+  return data
 }
 
 async function byField<T = Row>(table: string, field: string, value: string): Promise<(T & { _row: number })[]> {
@@ -23,16 +24,18 @@ async function byField<T = Row>(table: string, field: string, value: string): Pr
   const r = await fetch(`${BASE}/api/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
     headers: H(), cache: 'no-store',
   })
-  if (!r.ok) return []
+  if (!r.ok) throw new Error(`gsdb GET ${table}/by/${field}/${value} → ${r.status}`)
   const data = await r.json()
-  return Array.isArray(data) ? data : []
+  if (!Array.isArray(data)) throw new Error(`gsdb GET ${table}/by/${field}/${value}: expected array, got ${typeof data}`)
+  return data
 }
 
 async function append(table: string, row: Record<string, unknown>): Promise<void> {
-  if (!BASE || !APP || !KEY) return
-  await fetch(`${BASE}/api/${APP}/${table}`, {
+  if (!BASE || !APP || !KEY) throw new Error(`gsdb: missing config (BASE/APP/KEY)`)
+  const r = await fetch(`${BASE}/api/${APP}/${table}`, {
     method: 'POST', headers: H(), body: JSON.stringify(row),
   })
+  if (!r.ok) throw new Error(`gsdb POST ${table} → ${r.status}`)
 }
 
 async function updateByField(table: string, field: string, value: string, fields: Record<string, unknown>): Promise<void> {
@@ -125,9 +128,15 @@ export async function addItem(tabId: string, description: string, amountCents: n
   return { ...item, _row: -1 }
 }
 
+function coerceAmountCents(raw: unknown, context: string): number {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) throw new Error(`gsdb: invalid amountCents ${JSON.stringify(raw)} in ${context}`)
+  return n
+}
+
 export async function getItems(tabId: string): Promise<Item[]> {
   const rows = await byField<Item>('Items', 'tabId', tabId)
-  return rows.map(r => ({ ...r, amountCents: Number(r.amountCents) }))
+  return rows.map(r => ({ ...r, amountCents: coerceAmountCents(r.amountCents, `Items row ${r.id}`) }))
 }
 
 export async function deleteItem(itemId: string) {
@@ -171,7 +180,7 @@ export async function getPayments(tabId: string): Promise<Payment[]> {
   const rows = await byField<Payment>('Payments', 'tabId', tabId)
   return rows.map(r => ({
     ...r,
-    amountCents: Number(r.amountCents),
+    amountCents: coerceAmountCents(r.amountCents, `Payments row ${r.id}`),
     confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
   }))
 }
@@ -195,10 +204,10 @@ export async function getTabFull(tabId: string) {
 export async function getTabsFull() {
   const [allTabs, allItems, allPayments] = await Promise.all([all<Tab>('Tabs'), all<Item>('Items'), all<Payment>('Payments')])
   return allTabs.map(coerceTab).reverse().map(tab => {
-    const items = allItems.filter(r => r.tabId === tab.id).map(r => ({ ...r, amountCents: Number(r.amountCents) })) as Item[]
+    const items = allItems.filter(r => r.tabId === tab.id).map(r => ({ ...r, amountCents: coerceAmountCents(r.amountCents, `Items row ${r.id}`) })) as Item[]
     const payments = allPayments.filter(r => r.tabId === tab.id).map(r => ({
       ...r,
-      amountCents: Number(r.amountCents),
+      amountCents: coerceAmountCents(r.amountCents, `Payments row ${r.id}`),
       confirmed: String(r.confirmed).toUpperCase() === 'TRUE',
     })) as Payment[]
     return { tab, items, payments, ...tally(items, payments) }
