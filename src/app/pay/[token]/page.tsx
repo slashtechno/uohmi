@@ -85,6 +85,7 @@ export default function PayPage() {
     }
   }
 
+
   if (loading) {
     return (
       <main className="max-w-md mx-auto px-4 py-16 md:py-24">

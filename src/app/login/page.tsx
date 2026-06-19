@@ -31,6 +31,7 @@ export default function LoginPage() {
     }
   }
 
+
   return (
     <main className="max-w-md mx-auto px-4 py-16 md:py-24">
       <div className="bg-card border border-border rounded-xl p-6 md:p-8 animate-fade-in">

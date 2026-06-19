@@ -14,7 +14,8 @@ async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
   if (!BASE || !APP || !KEY) return []
   const r = await fetch(`${BASE}/api/${APP}/${table}`, { headers: H(), cache: 'no-store' })
   if (!r.ok) return []
-  return r.json()
+  const data = await r.json()
+  return Array.isArray(data) ? data : []
 }
 
 async function byField<T = Row>(table: string, field: string, value: string): Promise<(T & { _row: number })[]> {
@@ -23,7 +24,8 @@ async function byField<T = Row>(table: string, field: string, value: string): Pr
     headers: H(), cache: 'no-store',
   })
   if (!r.ok) return []
-  return r.json()
+  const data = await r.json()
+  return Array.isArray(data) ? data : []
 }
 
 async function append(table: string, row: Record<string, unknown>): Promise<void> {

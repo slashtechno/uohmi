@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { ReceiptImportField } from '@/components/ReceiptImportField'
 
 export default function NewInvoicePage() {
@@ -69,8 +70,13 @@ export default function NewInvoicePage() {
     }
   }
 
+
   return (
     <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
+      <Link href="/" className="text-accent hover:text-accent-dark text-sm mb-4 inline-block">
+        ← Back to dashboard
+      </Link>
+
       <div className="bg-card border border-border rounded-xl p-4 md:p-6 animate-fade-in">
         <h1 className="text-2xl font-bold text-accent font-serif mb-6">New invoice</h1>
 
