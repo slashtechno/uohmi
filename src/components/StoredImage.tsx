@@ -8,5 +8,6 @@ export async function StoredImage({ fileKey, alt, className = '' }: { fileKey: s
       Image unavailable
     </div>
   )
+  // eslint-disable-next-line @next/next/no-img-element
   return <img src={url} alt={alt} className={`rounded-lg max-w-full ${className}`} />
 }

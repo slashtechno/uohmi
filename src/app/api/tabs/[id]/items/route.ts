@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { addItem, deleteItem, getItems } from '@/lib/db'
+import { deleteItem, getItems } from '@/lib/db'
 import { addItemAndNotify, addItemsBulkAndNotify } from '@/lib/tabs'
 import { getTab } from '@/lib/db'
 

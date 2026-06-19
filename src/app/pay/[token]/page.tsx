@@ -115,7 +115,7 @@ export default function PayPage() {
         <div className="bg-card border border-border rounded-xl p-6 text-center animate-fade-in">
           <p className="text-4xl mb-4">💸</p>
           <h2 className="text-xl font-bold text-ink font-serif mb-2">Payment submitted</h2>
-          <p className="text-ink-2">You said you'd pay them back. Now we wait for confirmation.</p>
+          <p className="text-ink-2">Payment noted, thank you for your generosity.</p>
         </div>
       </main>
     )
@@ -127,7 +127,7 @@ export default function PayPage() {
         <div className="bg-card border border-border rounded-xl p-6 text-center animate-fade-in">
           <p className="text-4xl mb-4">✅</p>
           <h2 className="text-xl font-bold text-ink font-serif mb-2">Already paid</h2>
-          <p className="text-ink-2">This invoice has been settled. You're free.</p>
+          <p className="text-ink-2">Settled. You&apos;re free. Your conscience is clean.</p>
         </div>
       </main>
     )
@@ -137,7 +137,7 @@ export default function PayPage() {
     <main className="max-w-md mx-auto px-4 py-8 md:py-12">
       <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6 animate-fade-in">
         <h1 className="text-2xl font-bold text-accent font-serif mb-2">uohmi</h1>
-        <p className="text-ink-2 mb-6">You said you'd pay them back. Here we are.</p>
+        <p className="text-ink-2 mb-6">An itemized record of your friend&apos;s generosity.</p>
 
         <div className="mb-6">
           <div className="space-y-2 mb-4">
@@ -169,7 +169,7 @@ export default function PayPage() {
 
         {tab.notes && (
           <div className="bg-accent-bg rounded-lg p-3 mb-6">
-            <p className="text-accent-dark text-sm italic">"{tab.notes}"</p>
+            <p className="text-accent-dark text-sm italic">&ldquo;{tab.notes}&rdquo;</p>
           </div>
         )}
 
@@ -236,7 +236,7 @@ export default function PayPage() {
               type="text"
               value={senderNote}
               onChange={(e) => setSenderNote(e.target.value)}
-              placeholder="Here's what I owe you..."
+              placeholder="A brief, apologetic note..."
               className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
             />
           </div>

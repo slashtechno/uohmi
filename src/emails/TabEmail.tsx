@@ -12,13 +12,6 @@ interface TabEmailProps {
 
 export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: TabEmailProps) {
   const format = (cents: number) => `$${(cents / 100).toFixed(2)}`
-  const subjects: Record<typeof kind, string> = {
-    opened: "a running tab, from your conscience",
-    'item-added': `uohmi update — running total: ${format(total)}`,
-    finalized: `the final tally: ${format(total)}`,
-    reminder: `friendly reminder — you still owe ${format(total)}`,
-    cancelled: "invoice cancelled",
-  }
   const preheaders: Record<typeof kind, string> = {
     opened: "I'll add expenses as they come. Pay when convenient.",
     'item-added': `Just added: ${latest}. Running total below.`,
@@ -43,11 +36,11 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
             {kind === 'cancelled' ? (
               <>
                 <Text style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: '24px' }}>
-                  Hi {tab.recipientName}, the invoice sent to you has been cancelled. You don't owe anything.
+                  Hi {tab.recipientName}, the invoice sent to you has been cancelled. You don&apos;t owe anything.
                 </Text>
                 {tab.notes && (
                   <Section style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fdf0ee', borderRadius: '8px' }}>
-                    <Text style={{ fontSize: '14px', color: '#a8685e', fontStyle: 'italic' }}>"{tab.notes}"</Text>
+                    <Text style={{ fontSize: '14px', color: '#a8685e', fontStyle: 'italic' }}>&ldquo;{tab.notes}&rdquo;</Text>
                   </Section>
                 )}
                 <Text style={{ fontSize: '14px', color: '#7c6e67', fontStyle: 'italic' }}>
@@ -58,7 +51,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
               <>
                 {kind === 'opened' && (
                   <Text style={{ fontSize: '14px', color: '#7c6e67', marginBottom: '24px', fontStyle: 'italic' }}>
-                    You said you'd pay me back. Here we are.
+                    An itemized record of your generosity.
                   </Text>
                 )}
 
@@ -92,7 +85,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
 
                 {tab.notes && (
                   <Section style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fdf0ee', borderRadius: '8px' }}>
-                    <Text style={{ fontSize: '14px', color: '#a8685e', fontStyle: 'italic' }}>"{tab.notes}"</Text>
+                    <Text style={{ fontSize: '14px', color: '#a8685e', fontStyle: 'italic' }}>&ldquo;{tab.notes}&rdquo;</Text>
                   </Section>
                 )}
 
@@ -122,7 +115,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
 
                 {kind === 'finalized' && (
                   <Text style={{ marginTop: '24px', fontSize: '13px', color: '#c4b5ac', textAlign: 'center' }}>
-                    That's everything. No more surprises.
+                    That&apos;s everything. No more surprises.
                   </Text>
                 )}
               </>
@@ -130,7 +123,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
           </Section>
 
           <Text style={{ marginTop: '24px', fontSize: '12px', color: '#c4b5ac', textAlign: 'center' }}>
-            Sent via uohmi — for when they said they'd pay you back.
+            Sent via uohmi — for when they said they&apos;d pay you back.
           </Text>
         </Container>
       </Body>

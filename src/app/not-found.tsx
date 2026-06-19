@@ -6,7 +6,7 @@ export default function NotFound() {
       <div className="text-center">
         <p className="text-4xl mb-4">🤷</p>
         <h1 className="text-2xl font-bold text-ink font-serif mb-2">Not found</h1>
-        <p className="text-ink-2 mb-6">This invoice doesn't exist. Either it was paid, forgiven, or you're lost.</p>
+        <p className="text-ink-2 mb-6">This invoice doesn&apos;t exist. Either it was paid, forgiven, or you&apos;re lost.</p>
         <Link href="/" className="text-accent hover:text-accent-dark underline">
           Back to dashboard
         </Link>

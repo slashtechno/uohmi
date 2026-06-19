@@ -1,4 +1,5 @@
 import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade } from '@/lib/db'
+import type { Payment } from '@/lib/db'
 import { appUrl } from '@/lib/url'
 import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/tabs'
 import { sendTabEmail } from '@/lib/email'
@@ -7,7 +8,7 @@ import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/StatusBadge'
 import { CopyButton } from '@/components/CopyButton'
 import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton'
-import { formatMoney, timeAgo } from '@/lib/utils'
+import { formatMoney } from '@/lib/utils'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -102,7 +103,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
         {tab.notes && (
           <div className="bg-accent-bg rounded-lg p-3 mb-4">
-            <p className="text-accent-dark text-sm italic">"{tab.notes}"</p>
+            <p className="text-accent-dark text-sm italic">&ldquo;{tab.notes}&rdquo;</p>
           </div>
         )}
 
@@ -225,14 +226,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         <div className="text-center py-8">
           <p className="text-4xl mb-2">🙏</p>
           <p className="text-s-forgiven-text text-lg font-medium">Forgiven</p>
-          <p className="text-ink-2 text-sm mt-1">You forgave this one. You're a saint. A financially irresponsible saint.</p>
+          <p className="text-ink-2 text-sm mt-1">You forgave this one. You&apos;re a saint. A financially irresponsible saint.</p>
         </div>
       )}
     </main>
   )
 }
 
-async function PaymentCard({ payment, tabId }: { payment: any; tabId: string }) {
+async function PaymentCard({ payment, tabId }: { payment: Payment; tabId: string }) {
   const methodLabels: Record<string, string> = {
     CASH: 'Cash',
     ZELLE: 'Zelle',
@@ -258,7 +259,7 @@ async function PaymentCard({ payment, tabId }: { payment: any; tabId: string }) 
       </div>
 
       {payment.senderNote && (
-        <p className="text-sm text-ink-2 italic mb-2">"{payment.senderNote}"</p>
+        <p className="text-sm text-ink-2 italic mb-2">&ldquo;{payment.senderNote}&rdquo;</p>
       )}
 
       {!payment.confirmed && (

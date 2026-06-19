@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { addPayment, getTabFull } from '@/lib/db'
+import type { Method } from '@/lib/db'
 import { notifications } from '@/lib/notify'
 
 export async function POST(req: NextRequest) {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!full) return NextResponse.json({ error: 'Tab not found' }, { status: 404 })
 
   const payment = await addPayment({
-    tabId, amountCents, method: method as any,
+    tabId, amountCents, method: method as Method,
     confirmed: false, senderNote
   })
 

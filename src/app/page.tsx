@@ -22,7 +22,7 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-bold text-accent font-serif">uohmi</h1>
           <p className="text-ink-2 mt-1">
             {fulls.length === 0
-              ? "No invoices yet. Either your friends are very generous, or you haven't started."
+              ? "No invoices yet. Either your friends pay instantly, or you haven't started."
               : `Outstanding: ${formatMoney(totalOutstanding)}`}
           </p>
         </div>

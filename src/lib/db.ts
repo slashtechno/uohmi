@@ -8,7 +8,7 @@ const H = (extra?: Record<string, string>) => ({
   ...extra,
 })
 
-type Row = Record<string, any> & { _row: number }
+type Row = Record<string, unknown> & { _row: number }
 
 async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
   if (!BASE || !APP || !KEY) throw new Error(`gsdb: missing config (BASE/APP/KEY)`)
@@ -64,14 +64,14 @@ export interface Tab {
   _row: number
 }
 
-function coerceTab(r: any): Tab {
+function coerceTab(r: Record<string, unknown>): Tab {
   const raw = r.receiptFileKey
   let receiptFileKeys: string[] | undefined
   if (typeof raw === 'string' && raw.length > 0) {
-    try { receiptFileKeys = JSON.parse(raw) } catch { receiptFileKeys = [raw] }
+    try { receiptFileKeys = JSON.parse(raw) as string[] } catch { receiptFileKeys = [raw] }
   }
-  const { receiptFileKey: _dropped, ...rest } = r
-  return { ...rest, ...(receiptFileKeys ? { receiptFileKeys } : {}) } as Tab
+  const { ...rest } = r
+  return { ...rest, ...(receiptFileKeys ? { receiptFileKeys } : {}) } as unknown as Tab
 }
 
 export async function createTab(input: {
@@ -83,7 +83,7 @@ export async function createTab(input: {
     createdAt: new Date().toISOString(),
     ...input,
   }
-  await append('Tabs', tab as any)
+  await append('Tabs', tab as unknown as Record<string, unknown>)
   return coerceTab({ ...tab, _row: -1 })
 }
 
@@ -172,7 +172,7 @@ export async function addPayment(p: Omit<Payment, 'id'|'createdAt'|'_row'>): Pro
     ...p, id: nanoid(10), createdAt: new Date().toISOString(),
     confirmed: String(p.confirmed).toUpperCase(),
   }
-  await append('Payments', row as any)
+  await append('Payments', row as unknown as Record<string, unknown>)
   return { ...p, id: row.id, createdAt: row.createdAt, _row: -1 }
 }
 

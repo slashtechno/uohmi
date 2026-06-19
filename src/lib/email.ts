@@ -53,9 +53,9 @@ export async function sendTabEmail(args: {
 }
 
 const subjects: Record<Kind, (total: number) => string> = {
-  opened: (t) => `Invoice: $${(t / 100).toFixed(2)}`,
-  "item-added": (t) => `Updated: $${(t / 100).toFixed(2)}`,
-  finalized: (t) => `Invoice Total: $${(t / 100).toFixed(2)}`,
-  reminder: (t) => `Payment Due: $${(t / 100).toFixed(2)}`,
-  cancelled: () => "Invoice Cancelled",
+  opened: (t) => `a running tab, from your conscience — $${(t / 100).toFixed(2)}`,
+  "item-added": (t) => `uohmi update — your total just went up: $${(t / 100).toFixed(2)}`,
+  finalized: (t) => `the final tally: $${(t / 100).toFixed(2)}`,
+  reminder: (t) => `the $${(t / 100).toFixed(2)} question: when's it getting paid?`,
+  cancelled: () => `never mind, you're off the hook`,
 }

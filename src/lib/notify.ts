@@ -25,7 +25,7 @@ export const notifications = {
   tabSent: (name: string, finalized: boolean) =>
     push({ title: 'Sent', message: INCLUDE_PII ? `Invoice sent to ${name}. ${finalized ? 'Now we wait.' : 'Running tab is live.'}` : `Invoice sent. ${finalized ? 'Now we wait.' : 'Running tab is live.'}`, tags: ['email'] }),
   payOpened: (name: string, id: string) =>
-    push({ title: 'Pay page opened', message: INCLUDE_PII ? `${name} opened the pay page.` : 'Pay page opened.', tags: ['eyes'], click: adminUrl(id) }),
+    push({ title: 'They\'re looking', message: INCLUDE_PII ? `${name} opened the pay page.` : 'They opened the pay page.', tags: ['eyes'], click: adminUrl(id) }),
   paymentClaimed: (name: string, method: string, id: string) =>
     push({ title: 'Payment claimed', message: INCLUDE_PII ? `${name} says they paid via ${method}. Confirm it?` : `Payment claimed via ${method}. Confirm it?`, priority: 'high', tags: ['moneybag'], click: adminUrl(id) }),
 }

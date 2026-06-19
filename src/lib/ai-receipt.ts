@@ -24,6 +24,7 @@ function getModel() {
 
 export async function parseReceipt(image: ArrayBuffer): Promise<{ items: { description: string; amountCents: number }[] }> {
   const agent = new ToolLoopAgent({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     model: getModel() as any,
     output: agentOutput,
     instructions: "You extract expense line items from receipt images for an expense tracking app.",
