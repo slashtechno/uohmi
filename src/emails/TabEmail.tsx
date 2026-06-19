@@ -20,11 +20,11 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
     cancelled: "invoice cancelled",
   }
   const preheaders: Record<typeof kind, string> = {
-    opened: "I'll add expenses as they come. Pay now or whenever.",
+    opened: "I'll add expenses as they come. Pay when convenient.",
     'item-added': `Just added: ${latest}. Running total below.`,
-    finalized: "That's everything. Pay when you can. I'm watching.",
+    finalized: "That's everything. No more surprises.",
     reminder: "Just checking in. The debt remains.",
-    cancelled: "The invoice has been cancelled. You're off the hook.",
+    cancelled: "The invoice has been cancelled. You're all clear.",
   }
 
   return (
