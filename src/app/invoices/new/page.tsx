@@ -14,6 +14,7 @@ export default function NewInvoicePage() {
   const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [notes, setNotes] = useState('')
+  const [receipts, setReceipts] = useState<{ base64: string; mediaType: string }[]>([])
 
   function addItem() {
     setItems([...items, { description: '', amountCents: 0 }])
@@ -38,6 +39,19 @@ export default function NewInvoicePage() {
       updated[index].description = value
     }
     setItems(updated)
+  }
+
+  function handleReceiptFiles(files: FileList | null) {
+    if (!files?.length) return
+    setReceipts([])
+    Promise.all(Array.from(files).map(file => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve((reader.result as string).split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    }))).then(b64s => {
+      setReceipts(b64s.map((base64, i) => ({ base64, mediaType: files[i].type })))
+    })
   }
 
   function handleImportedItems(parsed: { description: string; amountCents: number }[]) {
@@ -66,6 +80,7 @@ export default function NewInvoicePage() {
           recipientEmail,
           notes,
           items: items.filter(i => i.description && i.amountCents > 0),
+          receipts,
           finalize,
         }),
       })
@@ -136,8 +151,26 @@ export default function NewInvoicePage() {
           </div>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 space-y-3">
           <ReceiptImportField onParsed={(parsed) => { if (parsed?.length) handleImportedItems(parsed) }} />
+          <div className="p-3 bg-card-hover rounded-lg border border-border">
+            <label className="text-xs font-medium text-ink-2 mb-2 block">Attach receipt images</label>
+            <input
+              type="file" accept="image/*" multiple
+              onChange={(e) => handleReceiptFiles(e.target.files)}
+              className="w-full text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
+            />
+            {receipts.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {receipts.map((_, i) => (
+                  <span key={i} className="flex items-center gap-1 px-2 py-0.5 bg-accent-bg rounded text-xs text-accent-dark">
+                    Receipt {i + 1}
+                    <button type="button" onClick={() => setReceipts(prev => prev.filter((_, j) => j !== i))} className="hover:text-s-confirm-text">✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mb-6">

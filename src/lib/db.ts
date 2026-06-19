@@ -65,7 +65,7 @@ export interface Tab {
 }
 
 function coerceTab(r: Record<string, unknown>): Tab {
-  const raw = r.receiptFileKey
+  const raw = r.receiptFileKeys
   let receiptFileKeys: string[] | undefined
   if (typeof raw === 'string' && raw.length > 0) {
     try { receiptFileKeys = JSON.parse(raw) as string[] } catch { receiptFileKeys = [raw] }
@@ -110,7 +110,7 @@ export async function addTabReceiptKey(id: string, fileKey: string) {
   const r = await getTab(id)
   if (!r) return
   const existing = r.receiptFileKeys ?? []
-  await updateByField('Tabs', 'id', id, { receiptFileKey: JSON.stringify([...existing, fileKey]) })
+  await updateByField('Tabs', 'id', id, { receiptFileKeys: JSON.stringify([...existing, fileKey]) })
 }
 
 export async function updateTab(id: string, fields: { recipientName?: string; recipientEmail?: string; notes?: string }) {
