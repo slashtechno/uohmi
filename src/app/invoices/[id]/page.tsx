@@ -143,7 +143,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
                 <span className="text-ink-2">{formatMoney(item.amountCents)}</span>
                 {canEditItems && (
                   <form action={handleDeleteItem.bind(null, item.id)}>
-                    <button type="submit" className="text-ink-3 hover:text-s-confirm-text transition-colors opacity-0 group-hover:opacity-100" aria-label="Delete item">
+                    <button type="submit" className="text-ink-3 hover:text-s-confirm-text transition-colors md:opacity-0 md:group-hover:opacity-100" aria-label="Delete item">
                       ✕
                     </button>
                   </form>
