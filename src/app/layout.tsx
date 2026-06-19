@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/Providers";
+import { Footer } from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -33,8 +34,13 @@ export default function RootLayout({
         <meta name="theme-color" content="#c4847a" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
-      <body className="min-h-screen bg-bg text-ink font-serif antialiased safe-bottom">
-        <Providers>{children}</Providers>
+      <body className="min-h-screen bg-bg text-ink font-serif antialiased safe-bottom flex flex-col">
+        <Providers>
+          <div className="flex-1">
+            {children}
+          </div>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );
