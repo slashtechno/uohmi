@@ -111,18 +111,18 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
 
         <div className="p-3 bg-card-hover rounded-lg border border-border">
         <p className="text-xs font-medium text-ink-2 mb-2">Or import from receipt</p>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full min-w-0">
           <input
             ref={receiptRef}
             type="file"
             accept="image/*"
-            className="w-full sm:flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
+            className="min-w-0 w-full sm:flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
           />
           <button
             type="button"
             onClick={handleParseReceipt}
             disabled={parsing}
-            className="px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-md hover:bg-accent-dark disabled:opacity-50 transition-colors whitespace-nowrap"
+            className="w-full sm:w-auto px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-md hover:bg-accent-dark disabled:opacity-50 transition-colors whitespace-nowrap"
           >
             {parsing ? 'Parsing...' : 'Parse receipt'}
           </button>
