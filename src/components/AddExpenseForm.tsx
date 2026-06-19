@@ -1,7 +1,8 @@
 'use client'
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ReceiptImportField } from './ReceiptImportField'
+import { parseMoney } from '@/lib/utils'
 
 type ParsedItem = { description: string; amountCents: number }
 
@@ -22,7 +23,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
       const res = await fetch(`/api/tabs/${tabId}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description, amountCents: Math.round(parseFloat(amount) * 100) }),
+        body: JSON.stringify({ description, amountCents: parseMoney(amount) }),
       })
       if (!res.ok) throw new Error()
       setDescription('')

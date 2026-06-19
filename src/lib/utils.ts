@@ -4,6 +4,10 @@ export function formatMoney(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
 }
 
+export function parseMoney(value: string): number {
+  return Math.round(parseFloat(value || '0') * 100)
+}
+
 export function statusBadge(status: TabStatus, hasUnconfirmed?: boolean) {
   const badges: Record<TabStatus, { bg: string; text: string; label: string }> = {
     DRAFT:    { bg: 'bg-s-draft-bg',    text: 'text-s-draft-text',    label: 'Draft' },

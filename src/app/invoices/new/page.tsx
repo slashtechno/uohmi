@@ -3,34 +3,46 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ReceiptImportField } from '@/components/ReceiptImportField'
+import { parseMoney } from '@/lib/utils'
 
 export default function NewInvoicePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [items, setItems] = useState([{ description: '', amountCents: 0 }])
+  const [amountInputs, setAmountInputs] = useState([''])
   const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [notes, setNotes] = useState('')
 
   function addItem() {
     setItems([...items, { description: '', amountCents: 0 }])
+    setAmountInputs([...amountInputs, ''])
   }
 
   function removeItem(index: number) {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index))
+      setAmountInputs(amountInputs.filter((_, i) => i !== index))
     }
   }
 
   function updateItem(index: number, field: string, value: string) {
     const updated = [...items]
     if (field === 'amountCents') {
-      updated[index].amountCents = Math.round(parseFloat(value || '0') * 100)
+      const updatedInputs = [...amountInputs]
+      updatedInputs[index] = value
+      setAmountInputs(updatedInputs)
+      updated[index].amountCents = parseMoney(value)
     } else {
       updated[index].description = value
     }
     setItems(updated)
+  }
+
+  function handleImportedItems(parsed: { description: string; amountCents: number }[]) {
+    setItems(parsed)
+    setAmountInputs(parsed.map(item => (item.amountCents / 100).toFixed(2)))
   }
 
   async function handleSubmit(finalize: boolean) {
@@ -125,7 +137,7 @@ export default function NewInvoicePage() {
         </div>
 
         <div className="mb-4">
-          <ReceiptImportField onParsed={(parsed) => { if (parsed?.length) setItems(parsed) }} />
+          <ReceiptImportField onParsed={(parsed) => { if (parsed?.length) handleImportedItems(parsed) }} />
         </div>
 
         <div className="mb-6">
@@ -154,7 +166,7 @@ export default function NewInvoicePage() {
                   type="number"
                   step="0.01"
                   min="0"
-                  value={item.amountCents > 0 ? (item.amountCents / 100).toFixed(2) : ''}
+                  value={amountInputs[i] ?? ''}
                   onChange={(e) => updateItem(i, 'amountCents', e.target.value)}
                   placeholder="$0.00"
                   className="w-24 px-3 py-2.5 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm text-right"
