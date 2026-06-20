@@ -247,8 +247,16 @@ export async function uploadFile(key: string, bytes: Buffer, contentType: string
       headers: { 'Content-Type': contentType },
       body: new Uint8Array(bytes),
     })
-    return r.ok ? key : null
-  } catch { return null }
+    if (!r.ok) {
+      const body = await r.text().catch(() => '')
+      console.error(`uploadFile S3 PUT failed: ${r.status} ${r.statusText} — ${body}`)
+      return null
+    }
+    return key
+  } catch (e) {
+    console.error('uploadFile error:', e)
+    return null
+  }
 }
 
 export async function getFileUrl(key: string): Promise<string | null> {
