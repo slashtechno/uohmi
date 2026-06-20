@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTab, uploadFile, addTabReceiptKey, removeTabReceiptKey, deleteFile } from '@/lib/db'
+import { getTab, getUploadPresignUrl, addTabReceiptKey, removeTabReceiptKey, deleteFile } from '@/lib/db'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -10,19 +10,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif',
   }
 
-  const { base64, mediaType } = await req.json()
-  if (!base64 || !mediaType) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  const { mediaType } = await req.json()
+  if (!mediaType) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const ext = ALLOWED_TYPES[mediaType]
   if (!ext) return NextResponse.json({ error: 'Unsupported file type' }, { status: 415 })
 
   const { nanoid } = await import('nanoid')
   const key = `receipts/${id}-${nanoid(8)}.${ext}`
-  const uploaded = await uploadFile(key, Buffer.from(base64, 'base64'), mediaType)
-  if (!uploaded) return NextResponse.json({ error: 'Upload failed' }, { status: 502 })
 
-  await addTabReceiptKey(id, uploaded)
-  return NextResponse.json({ key: uploaded })
+  const uploadUrl = await getUploadPresignUrl(key)
+  if (!uploadUrl) return NextResponse.json({ error: 'Presign failed' }, { status: 502 })
+
+  // Record the key optimistically; client confirms with us only after successful upload
+  await addTabReceiptKey(id, key)
+
+  return NextResponse.json({ key, uploadUrl })
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

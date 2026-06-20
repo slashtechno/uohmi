@@ -17,20 +17,32 @@ export function ReceiptManager({ tabId, initialUrls, canEdit }: ReceiptManagerPr
   async function handleUpload(file: File) {
     setUploading(true)
     try {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve((reader.result as string).split(',')[1])
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-      const res = await fetch(`/api/invoices/${tabId}/receipts`, {
+      // 1. Get a presigned PUT URL from our server
+      const presignRes = await fetch(`/api/invoices/${tabId}/receipts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64, mediaType: file.type }),
+        body: JSON.stringify({ mediaType: file.type }),
       })
-      if (!res.ok) return
-      // Fetch the URL for the newly uploaded receipt via the existing getFileUrl path
-      const { key } = await res.json()
+      if (!presignRes.ok) return
+      const { key, uploadUrl } = await presignRes.json()
+
+      // 2. Upload directly to S3 (bytes never pass through our server)
+      const putRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      })
+      if (!putRes.ok) {
+        // Roll back the key we optimistically recorded
+        await fetch(`/api/invoices/${tabId}/receipts`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key }),
+        })
+        return
+      }
+
+      // 3. Fetch a view URL for the thumbnail
       const urlRes = await fetch(`/api/files/${key.split('/').map(encodeURIComponent).join('/')}`)
       const url = urlRes.ok ? (await urlRes.json()).url : ''
       setReceipts(prev => [...prev, { key, url }])
