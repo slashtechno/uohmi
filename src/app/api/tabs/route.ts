@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       if (!base64 || !mediaType) continue
       const ext = mediaType.split('/')[1] ?? 'png'
       const key = await uploadFile(
-        `uohmi/receipts/${tab.id}-${i}.${ext}`,
+        `receipts/${tab.id}-${i}.${ext}`,
         Buffer.from(base64, 'base64'), mediaType
       )
       if (key) await addTabReceiptKey(tab.id, key)

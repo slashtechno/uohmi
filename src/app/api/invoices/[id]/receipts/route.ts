@@ -17,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!ext) return NextResponse.json({ error: 'Unsupported file type' }, { status: 415 })
 
   const { nanoid } = await import('nanoid')
-  const key = `uohmi/receipts/${id}-${nanoid(8)}.${ext}`
+  const key = `receipts/${id}-${nanoid(8)}.${ext}`
   const uploaded = await uploadFile(key, Buffer.from(base64, 'base64'), mediaType)
   if (!uploaded) return NextResponse.json({ error: 'Upload failed' }, { status: 502 })
 
