@@ -138,7 +138,7 @@ export default function PayPage() {
     <main className="max-w-md mx-auto px-4 py-8 md:py-12">
       <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6 animate-fade-in">
         <h1 className="text-2xl font-bold text-accent font-serif mb-2">uohmi</h1>
-        <p className="text-ink-2 mb-6">An itemized record of your friend&apos;s generosity.</p>
+        <p className="text-ink-2 mb-6">A legally questionable record of kindness.</p>
 
         <div className="mb-6">
           <div className="space-y-2 mb-4">
