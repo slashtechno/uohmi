@@ -4,7 +4,6 @@ import { useParams } from 'next/navigation'
 import confetti from 'canvas-confetti'
 
 type Tab = {
-  id: string
   recipientName: string
   notes?: string
   status: string
@@ -21,6 +20,7 @@ type FullTab = {
   total: number
   balance: number
   status: string
+  receiptUrls: { key: string; url: string }[]
 }
 
 export default function PayPage() {
@@ -28,6 +28,7 @@ export default function PayPage() {
   const token = params.token as string
 
   const [data, setData] = useState<FullTab | null>(null)
+  const [lightbox, setLightbox] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [method, setMethod] = useState<string>('')
@@ -66,7 +67,7 @@ export default function PayPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tabId: data.tab.id,
+          tabToken: token,
           amountCents: Math.round(parseFloat(effectiveAmount) * 100),
           method,
           senderNote,
@@ -107,7 +108,7 @@ export default function PayPage() {
 
   if (!data) return null
 
-  const { tab, items, total, balance, status } = data
+  const { tab, items, total, balance, status, receiptUrls } = data
 
   if (submitted) {
     return (
@@ -172,6 +173,36 @@ export default function PayPage() {
             <p className="text-accent-dark text-sm italic">&ldquo;{tab.notes}&rdquo;</p>
           </div>
         )}
+
+        {receiptUrls?.length > 0 && (
+          <div className="mb-6">
+            <p className="text-xs text-ink-3 mb-2">Receipts</p>
+            <div className="flex flex-wrap gap-2">
+              {receiptUrls.map(({ key, url }) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={key}
+                  src={url}
+                  alt="Receipt"
+                  onClick={() => setLightbox(key)}
+                  className="w-16 h-16 object-cover rounded-lg border border-border cursor-zoom-in hover:opacity-90 transition-opacity"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {lightbox && (() => {
+          const r = receiptUrls?.find(r => r.key === lightbox)
+          if (!r) return null
+          return (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setLightbox(null)}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={r.url} alt="Receipt" onClick={e => e.stopPropagation()} className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl" />
+              <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-card text-ink hover:bg-card-hover" aria-label="Close">✕</button>
+            </div>
+          )
+        })()}
 
         {status === 'OPEN' && (
           <div className="bg-s-open-bg rounded-lg p-3 mb-6">

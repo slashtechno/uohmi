@@ -114,6 +114,20 @@ export async function addTabReceiptKey(id: string, fileKey: string) {
   await updateByField('Tabs', 'id', id, { receiptFileKeys: JSON.stringify([...existing, fileKey]) })
 }
 
+export async function removeTabReceiptKey(id: string, fileKey: string) {
+  const r = await getTab(id)
+  if (!r) return
+  const filtered = (r.receiptFileKeys ?? []).filter(k => k !== fileKey)
+  await updateByField('Tabs', 'id', id, { receiptFileKeys: JSON.stringify(filtered) })
+}
+
+export async function regenerateTabToken(id: string): Promise<string> {
+  const { nanoid } = await import('nanoid')
+  const token = nanoid(16)
+  await updateByField('Tabs', 'id', id, { token })
+  return token
+}
+
 export async function updateTab(id: string, fields: { recipientName?: string; recipientEmail?: string; notes?: string }) {
   await updateByField('Tabs', 'id', id, fields)
 }
@@ -215,14 +229,24 @@ export async function getTabsFull() {
   })
 }
 
+export async function getUploadPresignUrl(key: string): Promise<string | null> {
+  try {
+    const r = await fetch(`${BASE}/api/${APP}/files/${key}/presign`, { method: 'POST', headers: H() })
+    if (!r.ok) return null
+    const { url } = await r.json()
+    return url as string
+  } catch { return null }
+}
+
 export async function uploadFile(key: string, bytes: Buffer, contentType: string): Promise<string | null> {
   try {
-    const r = await fetch(`${BASE}/api/${APP}/files/${key}`, {
+    const presignUrl = await getUploadPresignUrl(key)
+    if (!presignUrl) return null
+    const r = await fetch(presignUrl, {
       method: 'PUT',
-      headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': contentType },
+      headers: { 'Content-Type': contentType },
       body: new Uint8Array(bytes),
     })
-    if (r.status === 501) return null
     return r.ok ? key : null
   } catch { return null }
 }

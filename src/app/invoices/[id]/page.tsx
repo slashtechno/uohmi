@@ -1,9 +1,10 @@
-import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade } from '@/lib/db'
+import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade, getFileUrl, regenerateTabToken } from '@/lib/db'
 import type { Payment } from '@/lib/db'
 import { appUrl } from '@/lib/url'
 import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/tabs'
 import { sendTabEmail } from '@/lib/email'
 import { AddExpenseForm } from '@/components/AddExpenseForm'
+import { ReceiptManager } from '@/components/ReceiptManager'
 import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/StatusBadge'
 import { CopyButton } from '@/components/CopyButton'
@@ -20,6 +21,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   if (!full) notFound()
 
   const { tab, items, payments, total, confirmedPaid, balance, hasUnconfirmed } = full
+
+  const receiptUrls = await Promise.all(
+    (tab.receiptFileKeys ?? []).map(async key => ({ key, url: (await getFileUrl(key)) ?? '' }))
+  ).then(rs => rs.filter(r => r.url))
 
   const canEditItems = tab.status === 'DRAFT' || (tab.status === 'OPEN' && payments.length === 0)
 
@@ -74,6 +79,16 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     redirect(`/invoices/${tab.id}`)
   }
 
+  async function handleRerollToken() {
+    'use server'
+    await regenerateTabToken(tab.id)
+    const current = await getTabFull(tab.id)
+    if (current && current.tab.recipientEmail) {
+      await sendTabEmail({ kind: 'link-updated', tab: current.tab, items: current.items, total: current.total, balance: current.balance }).catch(() => {})
+    }
+    redirect(`/invoices/${tab.id}`)
+  }
+
   async function handleForgive() {
     'use server'
     const current = await getTabFull(tab.id)
@@ -108,9 +123,21 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         )}
 
         {tab.status !== 'DRAFT' && (
-          <div className="flex items-center gap-2 mb-4 p-2 bg-card-hover rounded-lg">
-            <span className="text-xs text-ink-3 truncate flex-1 font-mono">{payUrl}</span>
-            <CopyButton text={payUrl} />
+          <div className="mb-4">
+            <div className="flex items-center gap-2 p-2 bg-card-hover rounded-lg">
+              <span className="text-xs text-ink-3 truncate flex-1 font-mono">{payUrl}</span>
+              <CopyButton text={payUrl} />
+              <form action={handleRerollToken}>
+                <button type="submit" className="text-xs text-ink-3 hover:text-ink transition-colors px-2 py-1 rounded hover:bg-card" title="Invalidate current link and generate a new one">
+                  ↺ reroll
+                </button>
+              </form>
+            </div>
+            {(tab.receiptFileKeys?.length ?? 0) > 0 && (
+              <p className="text-xs text-ink-3 mt-1.5">
+                Invoicee can see {tab.receiptFileKeys!.length} receipt{tab.receiptFileKeys!.length !== 1 ? 's' : ''} via this link.
+              </p>
+            )}
           </div>
         )}
 
@@ -156,6 +183,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
         {tab.status === 'OPEN' && <AddExpenseForm tabId={tab.id} />}
       </div>
+
+      <ReceiptManager tabId={tab.id} initialUrls={receiptUrls} canEdit={canEdit} />
 
       {payments.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6">

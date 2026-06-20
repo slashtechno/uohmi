@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getTabByToken, getItems, getPayments } from '@/lib/db'
+import { getTabByToken, getItems, getPayments, getFileUrl } from '@/lib/db'
 import { notifications } from '@/lib/notify'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
@@ -13,11 +13,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   const confirmedPaid = payments.filter(p => p.confirmed).reduce((s, p) => s + p.amountCents, 0)
   const balance = total - confirmedPaid
 
+  const receiptUrls = await Promise.all(
+    (tab.receiptFileKeys ?? []).map(async key => ({ key, url: (await getFileUrl(key)) ?? '' }))
+  ).then(rs => rs.filter(r => r.url))
+
   return NextResponse.json({
-    tab: { id: tab.id, recipientName: tab.recipientName, notes: tab.notes, status: tab.status },
+    tab: { recipientName: tab.recipientName, notes: tab.notes, status: tab.status },
     items,
     total,
     balance,
     status: tab.status,
+    receiptUrls,
   })
 }

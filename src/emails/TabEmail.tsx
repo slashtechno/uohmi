@@ -1,7 +1,7 @@
 import { Html, Head, Body, Container, Section, Text, Button, Hr } from 'react-email'
 
 interface TabEmailProps {
-  kind: 'opened' | 'item-added' | 'finalized' | 'reminder' | 'cancelled'
+  kind: 'opened' | 'item-added' | 'finalized' | 'reminder' | 'cancelled' | 'link-updated'
   tab: { recipientName: string; notes?: string }
   items: { description: string; amountCents: number }[]
   total: number
@@ -18,6 +18,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
     finalized: "That's everything. No more surprises.",
     reminder: "Just checking in. The debt remains.",
     cancelled: "The invoice has been cancelled. You're all clear.",
+    'link-updated': "Your payment link has been updated. Use the button below.",
   }
 
   return (
