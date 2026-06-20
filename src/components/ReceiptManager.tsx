@@ -82,7 +82,7 @@ export function ReceiptManager({ tabId, initialUrls, canEdit }: ReceiptManagerPr
               {canEdit && (
                 <button
                   onClick={() => handleRemove(key)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-card border border-border rounded-full text-ink-3 hover:text-s-confirm-text flex items-center justify-center text-xs leading-none md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-card border border-border rounded-full text-ink-3 hover:text-s-confirm-text flex items-center justify-center text-xs leading-none transition-opacity"
                   aria-label="Remove receipt"
                 >
                   ✕
