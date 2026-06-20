@@ -8,10 +8,13 @@ export async function POST(req: NextRequest) {
   }
 
   const form = await req.formData()
-  const file = form.get('receipt') as File | null
-  if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  const files = form.getAll('receipts') as File[]
+  if (files.length === 0) return NextResponse.json({ error: 'No files provided' }, { status: 400 })
 
-  const buffer = await file.arrayBuffer()
-  const result = await parseReceipt(buffer)
-  return NextResponse.json(result)
+  // Parse each receipt in parallel and merge the line items into a single flat list.
+  const results = await Promise.all(
+    files.map(async (file) => parseReceipt(await file.arrayBuffer()))
+  )
+  const items = results.flatMap((r) => r.items)
+  return NextResponse.json({ items })
 }

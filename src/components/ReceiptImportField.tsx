@@ -6,20 +6,24 @@ type ParsedItem = { description: string; amountCents: number }
 export function ReceiptImportField({ onParsed }: { onParsed: (items: ParsedItem[]) => void }) {
   const [parsing, setParsing] = useState(false)
   const [error, setError] = useState('')
+  const [fileCount, setFileCount] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function handleParse() {
-    const file = inputRef.current?.files?.[0]
-    if (!file) return
+    const files = Array.from(inputRef.current?.files ?? [])
+    if (files.length === 0) return
     setParsing(true)
     setError('')
     try {
       const form = new FormData()
-      form.append('receipt', file)
+      for (const file of files) form.append('receipts', file)
       const res = await fetch('/api/receipts/parse', { method: 'POST', body: form })
       if (!res.ok) throw new Error()
       const { items } = await res.json()
       onParsed(items)
+      // Reset the picker so the same files aren't accidentally parsed twice.
+      if (inputRef.current) inputRef.current.value = ''
+      setFileCount(0)
     } catch {
       setError('Could not parse receipt.')
     } finally {
@@ -35,15 +39,17 @@ export function ReceiptImportField({ onParsed }: { onParsed: (items: ParsedItem[
           ref={inputRef}
           type="file"
           accept="image/*"
+          multiple
+          onChange={(e) => setFileCount(e.target.files?.length ?? 0)}
           className="min-w-0 w-full sm:flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
         />
         <button
           type="button"
           onClick={handleParse}
-          disabled={parsing}
-          className="w-full sm:w-auto px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-md hover:bg-accent-dark disabled:opacity-50 transition-colors whitespace-nowrap"
+          disabled={parsing || fileCount === 0}
+          className="w-full sm:w-auto px-3 py-1.5 bg-accent text-white text-xs font-medium rounded-md hover:bg-accent-dark disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
         >
-          {parsing ? 'Parsing...' : 'Parse receipt'}
+          {parsing ? 'Parsing...' : fileCount > 1 ? `Parse ${fileCount} receipts` : 'Parse receipt'}
         </button>
       </div>
       {error && <p className="text-xs text-s-confirm-text mt-2">{error}</p>}

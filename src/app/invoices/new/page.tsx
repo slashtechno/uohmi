@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ReceiptImportField } from '@/components/ReceiptImportField'
-import { parseMoney } from '@/lib/utils'
+import { formatMoney, parseMoney } from '@/lib/utils'
 
 export default function NewInvoicePage() {
   const router = useRouter()
@@ -15,6 +15,8 @@ export default function NewInvoicePage() {
   const [recipientEmail, setRecipientEmail] = useState('')
   const [notes, setNotes] = useState('')
   const [receipts, setReceipts] = useState<{ base64: string; mediaType: string }[]>([])
+
+  const total = items.reduce((sum, i) => sum + i.amountCents, 0)
 
   function addItem() {
     setItems([...items, { description: '', amountCents: 0 }])
@@ -55,8 +57,16 @@ export default function NewInvoicePage() {
   }
 
   function handleImportedItems(parsed: { description: string; amountCents: number }[]) {
-    setItems(parsed)
-    setAmountInputs(parsed.map(item => (item.amountCents / 100).toFixed(2)))
+    // Drop the trailing blank starter rows before appending so they don't sit interleaved with parsed data.
+    // findIndex gives us the first untouched row; everything from there on is filler.
+    const cutoff = items.findIndex(i => !i.description && i.amountCents === 0)
+    const existing = cutoff === -1 ? items : items.slice(0, cutoff)
+    const existingInputs = amountInputs.slice(0, existing.length)
+    setItems([...existing, ...parsed])
+    setAmountInputs([
+      ...existingInputs,
+      ...parsed.map(item => (item.amountCents / 100).toFixed(2)),
+    ])
   }
 
   async function handleSubmit(finalize: boolean) {
@@ -216,6 +226,13 @@ export default function NewInvoicePage() {
               </div>
             ))}
           </div>
+
+          {items.some(i => i.amountCents > 0) && (
+            <div className="flex justify-between items-center pt-3 mt-3 border-t border-border">
+              <span className="text-sm font-medium text-ink-2">Total</span>
+              <span className="text-lg font-bold text-accent">{formatMoney(total)}</span>
+            </div>
+          )}
         </div>
 
         {error && (
