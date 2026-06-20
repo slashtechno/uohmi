@@ -248,13 +248,13 @@ export async function uploadFile(key: string, bytes: Buffer, contentType: string
       body: new Uint8Array(bytes),
     })
     if (!r.ok) {
-      const body = await r.text().catch(() => '')
-      console.error(`uploadFile S3 PUT failed: ${r.status} ${r.statusText} — ${body}`)
+      console.error('uploadFile failed', { status: r.status, statusText: r.statusText, key })
       return null
     }
     return key
   } catch (e) {
-    console.error('uploadFile error:', e)
+    const msg = e instanceof Error ? e.name : 'unknown'
+    console.error('uploadFile error', { error: msg, key })
     return null
   }
 }
