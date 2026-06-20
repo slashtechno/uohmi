@@ -5,6 +5,7 @@ import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/ta
 import { sendTabEmail } from '@/lib/email'
 import { AddExpenseForm } from '@/components/AddExpenseForm'
 import { ReceiptManager } from '@/components/ReceiptManager'
+import { RerollTokenButton } from '@/components/RerollTokenButton'
 import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/StatusBadge'
 import { CopyButton } from '@/components/CopyButton'
@@ -127,11 +128,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <div className="flex items-center gap-2 p-2 bg-card-hover rounded-lg">
               <span className="text-xs text-ink-3 truncate flex-1 font-mono">{payUrl}</span>
               <CopyButton text={payUrl} />
-              <form action={handleRerollToken}>
-                <button type="submit" className="text-xs text-ink-3 hover:text-ink transition-colors px-2 py-1 rounded hover:bg-card" title="Invalidate current link and generate a new one">
-                  ↺ reroll
-                </button>
-              </form>
+              <RerollTokenButton action={handleRerollToken} />
             </div>
             {(tab.receiptFileKeys?.length ?? 0) > 0 && (
               <p className="text-xs text-ink-3 mt-1.5">
