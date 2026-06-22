@@ -1,14 +1,15 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { Lightbox } from './Lightbox'
 
 interface ReceiptManagerProps {
   tabId: string
   initialUrls: { key: string; url: string }[]
-  canEdit: boolean
+  canUpload: boolean
 }
 
-export function ReceiptManager({ tabId, initialUrls, canEdit }: ReceiptManagerProps) {
+export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManagerProps) {
   const [receipts, setReceipts] = useState(initialUrls)
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -62,7 +63,7 @@ export function ReceiptManager({ tabId, initialUrls, canEdit }: ReceiptManagerPr
     if (lightbox === key) setLightbox(null)
   }
 
-  if (receipts.length === 0 && !canEdit) return null
+  if (receipts.length === 0 && !canUpload) return null
 
   return (
     <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
@@ -79,7 +80,7 @@ export function ReceiptManager({ tabId, initialUrls, canEdit }: ReceiptManagerPr
                 onClick={() => setLightbox(key)}
                 className="w-20 h-20 object-cover rounded-lg border border-border cursor-zoom-in hover:opacity-90 transition-opacity"
               />
-              {canEdit && (
+              {canUpload && (
                 <button
                   onClick={() => handleRemove(key)}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-card border border-border rounded-full text-ink-3 hover:text-s-confirm-text flex items-center justify-center text-xs leading-none transition-opacity"
@@ -93,7 +94,7 @@ export function ReceiptManager({ tabId, initialUrls, canEdit }: ReceiptManagerPr
         </div>
       )}
 
-      {canEdit && (
+      {canUpload && (
         <div>
           <input
             ref={inputRef}
@@ -115,27 +116,7 @@ export function ReceiptManager({ tabId, initialUrls, canEdit }: ReceiptManagerPr
       {lightbox && (() => {
         const r = receipts.find(r => r.key === lightbox)
         if (!r) return null
-        return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70"
-            onClick={() => setLightbox(null)}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={r.url}
-              alt="Receipt"
-              onClick={e => e.stopPropagation()}
-              className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl"
-            />
-            <button
-              onClick={() => setLightbox(null)}
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-card text-ink hover:bg-card-hover"
-              aria-label="Close"
-            >
-              ✕
-            </button>
-          </div>
-        )
+        return <Lightbox src={r.url} alt="Receipt" onClose={() => setLightbox(null)} />
       })()}
     </div>
   )

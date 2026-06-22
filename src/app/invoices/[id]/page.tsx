@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation'
 import { StatusBadge } from '@/components/StatusBadge'
 import { CopyButton } from '@/components/CopyButton'
 import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton'
+import { SendReminderButton } from '@/components/SendReminderButton'
 import { formatMoney } from '@/lib/utils'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -181,7 +182,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         {tab.status === 'OPEN' && <AddExpenseForm tabId={tab.id} />}
       </div>
 
-      <ReceiptManager tabId={tab.id} initialUrls={receiptUrls} canEdit={canEdit} />
+      <ReceiptManager tabId={tab.id} initialUrls={receiptUrls} canUpload={tab.status !== 'PAID' && tab.status !== 'FORGIVEN'} />
 
       {payments.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
@@ -222,13 +223,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               </button>
             </form>
           )}
-          {canRemind && (
-            <form action={handleSendReminder} className="flex-1">
-              <button type="submit" className="w-full py-3 px-4 bg-card border border-border text-ink font-medium rounded-lg hover:bg-card-hover transition-colors">
-                Send reminder
-              </button>
-            </form>
-          )}
+          {canRemind && <SendReminderButton action={handleSendReminder} />}
           {tab.status !== 'PAID' && (
             <form action={handleForgive} className="flex-1">
               <button type="submit" className="w-full py-3 px-4 bg-s-forgiven-bg text-s-forgiven-text font-medium rounded-lg hover:bg-card-hover transition-colors">

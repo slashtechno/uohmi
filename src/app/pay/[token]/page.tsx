@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import confetti from 'canvas-confetti'
+import { Lightbox } from '@/components/Lightbox'
 
 type Tab = {
   recipientName: string
@@ -195,13 +196,7 @@ export default function PayPage() {
         {lightbox && (() => {
           const r = receiptUrls?.find(r => r.key === lightbox)
           if (!r) return null
-          return (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setLightbox(null)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={r.url} alt="Receipt" onClick={e => e.stopPropagation()} className="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl" />
-              <button onClick={() => setLightbox(null)} className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-card text-ink hover:bg-card-hover" aria-label="Close">✕</button>
-            </div>
-          )
+          return <Lightbox src={r.url} alt="Receipt" onClose={() => setLightbox(null)} />
         })()}
 
         {status === 'OPEN' && (
