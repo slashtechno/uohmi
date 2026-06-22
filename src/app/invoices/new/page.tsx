@@ -3,6 +3,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ReceiptImportField } from '@/components/ReceiptImportField'
+import { Input } from '@/components/Input'
+import { ErrorMessage } from '@/components/ErrorMessage'
 import { formatMoney, parseMoney } from '@/lib/utils'
 
 export default function NewInvoicePage() {
@@ -122,13 +124,13 @@ export default function NewInvoicePage() {
             <label htmlFor="recipientName" className="block text-sm font-medium text-ink-2 mb-1">
               Who owes you?
             </label>
-            <input
+            <Input
               id="recipientName"
               type="text"
               value={recipientName}
               onChange={(e) => setRecipientName(e.target.value)}
               placeholder="Friend's name"
-              className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
+              className="w-full px-4 py-3"
             />
           </div>
 
@@ -136,13 +138,13 @@ export default function NewInvoicePage() {
             <label htmlFor="recipientEmail" className="block text-sm font-medium text-ink-2 mb-1">
               Their email
             </label>
-            <input
+            <Input
               id="recipientEmail"
               type="email"
               value={recipientEmail}
               onChange={(e) => setRecipientEmail(e.target.value)}
               placeholder="friend@example.com"
-              className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
+              className="w-full px-4 py-3"
             />
           </div>
 
@@ -198,21 +200,21 @@ export default function NewInvoicePage() {
           <div className="space-y-3">
             {items.map((item, i) => (
               <div key={i} className="flex gap-2 items-start">
-                <input
+                <Input
                   type="text"
                   value={item.description}
                   onChange={(e) => updateItem(i, 'description', e.target.value)}
                   placeholder="What was this for?"
-                  className="flex-1 px-3 py-2.5 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm"
+                  className="flex-1 px-3 py-2.5 text-sm"
                 />
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   min="0"
                   value={amountInputs[i] ?? ''}
                   onChange={(e) => updateItem(i, 'amountCents', e.target.value)}
                   placeholder="$0.00"
-                  className="w-24 px-3 py-2.5 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm text-right"
+                  className="w-24 px-3 py-2.5 text-sm text-right"
                 />
                 {items.length > 1 && (
                   <button
@@ -235,11 +237,7 @@ export default function NewInvoicePage() {
           )}
         </div>
 
-        {error && (
-          <p className="text-sm text-s-confirm-text bg-s-confirm-bg p-3 rounded-lg mb-4" role="alert">
-            {error}
-          </p>
-        )}
+        <ErrorMessage message={error} />
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button

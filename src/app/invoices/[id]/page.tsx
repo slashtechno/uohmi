@@ -11,6 +11,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { CopyButton } from '@/components/CopyButton'
 import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton'
 import { SendReminderButton } from '@/components/SendReminderButton'
+import { Input } from '@/components/Input'
 import { formatMoney } from '@/lib/utils'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -200,13 +201,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <h2 className="text-sm font-medium text-ink-2 mb-3">Edit details</h2>
           <form action={handleEditDetails} className="space-y-3">
             <div className="flex gap-2">
-              <input name="recipientName" defaultValue={tab.recipientName} placeholder="Name" required
-                className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm" />
-              <input name="recipientEmail" type="email" defaultValue={tab.recipientEmail} placeholder="Email" required
-                className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm" />
+              <Input name="recipientName" defaultValue={tab.recipientName} placeholder="Name" required className="flex-1 px-3 py-2 text-sm" />
+              <Input name="recipientEmail" type="email" defaultValue={tab.recipientEmail} placeholder="Email" required className="flex-1 px-3 py-2 text-sm" />
             </div>
-            <input name="notes" defaultValue={tab.notes ?? ''} placeholder="Note (optional)"
-              className="w-full px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm" />
+            <Input name="notes" defaultValue={tab.notes ?? ''} placeholder="Note (optional)" className="w-full px-3 py-2 text-sm" />
             <button type="submit" className="px-4 py-2 bg-card border border-border text-ink text-sm font-medium rounded-lg hover:bg-card-hover transition-colors">
               Save
             </button>

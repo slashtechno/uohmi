@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react'
 import { Lightbox } from './Lightbox'
+import { ErrorMessage } from './ErrorMessage'
 
 interface ReceiptManagerProps {
   tabId: string
@@ -13,40 +14,41 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
   const [receipts, setReceipts] = useState(initialUrls)
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(file: File) {
     setUploading(true)
+    setError('')
     try {
-      // 1. Get a presigned PUT URL from our server
       const presignRes = await fetch(`/api/invoices/${tabId}/receipts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mediaType: file.type }),
       })
-      if (!presignRes.ok) return
+      if (!presignRes.ok) { setError('Failed to start upload.'); return }
       const { key, uploadUrl } = await presignRes.json()
 
-      // 2. Upload directly to S3 (bytes never pass through our server)
       const putRes = await fetch(uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': file.type },
         body: file,
       })
       if (!putRes.ok) {
-        // Roll back the key we optimistically recorded
         await fetch(`/api/invoices/${tabId}/receipts`, {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key }),
         })
+        setError('Upload failed. Please try again.')
         return
       }
 
-      // 3. Fetch a view URL for the thumbnail
       const urlRes = await fetch(`/api/files/${key.split('/').map(encodeURIComponent).join('/')}`)
       const url = urlRes.ok ? (await urlRes.json()).url : ''
       setReceipts(prev => [...prev, { key, url }])
+    } catch {
+      setError('Something went wrong. Please try again.')
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -54,13 +56,19 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
   }
 
   async function handleRemove(key: string) {
-    await fetch(`/api/invoices/${tabId}/receipts`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key }),
-    })
-    setReceipts(prev => prev.filter(r => r.key !== key))
-    if (lightbox === key) setLightbox(null)
+    setError('')
+    try {
+      const res = await fetch(`/api/invoices/${tabId}/receipts`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key }),
+      })
+      if (!res.ok) { setError('Failed to remove receipt.'); return }
+      setReceipts(prev => prev.filter(r => r.key !== key))
+      if (lightbox === key) setLightbox(null)
+    } catch {
+      setError('Something went wrong. Please try again.')
+    }
   }
 
   if (receipts.length === 0 && !canUpload) return null
@@ -95,7 +103,7 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
       )}
 
       {canUpload && (
-        <div>
+        <div className="space-y-2">
           <input
             ref={inputRef}
             type="file"
@@ -110,6 +118,7 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
           >
             {uploading ? 'Uploading…' : '+ Add receipt'}
           </button>
+          <ErrorMessage message={error} />
         </div>
       )}
 

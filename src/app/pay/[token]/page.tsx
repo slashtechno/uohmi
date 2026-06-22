@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import confetti from 'canvas-confetti'
 import { Lightbox } from '@/components/Lightbox'
+import { Input } from '@/components/Input'
+import { ErrorMessage } from '@/components/ErrorMessage'
 
 type Tab = {
   recipientName: string
@@ -240,7 +242,7 @@ export default function PayPage() {
               <label htmlFor="amount" className="block text-sm font-medium text-ink-2 mb-1">
                 Amount
               </label>
-              <input
+              <Input
                 id="amount"
                 type="number"
                 step="0.01"
@@ -248,7 +250,7 @@ export default function PayPage() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder={`$${(Math.max(0, balance) / 100).toFixed(2)}`}
-                className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
+                className="w-full px-4 py-3"
               />
             </div>
           )}
@@ -257,21 +259,17 @@ export default function PayPage() {
             <label htmlFor="senderNote" className="block text-sm font-medium text-ink-2 mb-1">
               Note (optional)
             </label>
-            <input
+            <Input
               id="senderNote"
               type="text"
               value={senderNote}
               onChange={(e) => setSenderNote(e.target.value)}
               placeholder="A brief, apologetic note..."
-              className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
+              className="w-full px-4 py-3"
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-s-confirm-text bg-s-confirm-bg p-3 rounded-lg" role="alert">
-              {error}
-            </p>
-          )}
+          <ErrorMessage message={error} />
 
           <button
             type="submit"

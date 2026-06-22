@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Input } from '@/components/Input'
+import { ErrorMessage } from '@/components/ErrorMessage'
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
@@ -43,23 +45,19 @@ export default function LoginPage() {
             <label htmlFor="password" className="block text-sm font-medium text-ink-2 mb-1">
               Password
             </label>
-            <input
+            <Input
               id="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
-              className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
+              className="w-full px-4 py-3"
               disabled={loading}
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-s-confirm-text bg-s-confirm-bg p-3 rounded-lg" role="alert">
-              {error}
-            </p>
-          )}
+          <ErrorMessage message={error} />
 
           <button
             type="submit"

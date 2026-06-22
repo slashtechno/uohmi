@@ -2,6 +2,8 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ReceiptImportField } from './ReceiptImportField'
+import { Input } from './Input'
+import { ErrorMessage } from './ErrorMessage'
 import { parseMoney } from '@/lib/utils'
 
 type ParsedItem = { description: string; amountCents: number }
@@ -56,21 +58,20 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
     }
   }
 
-
   return (
     <div className="mt-4 pt-4 border-t border-border space-y-4">
       <h3 className="text-sm font-medium text-ink-2">Add expense</h3>
 
       <form onSubmit={handleAdd} className="flex gap-2">
-        <input
+        <Input
           type="text"
           value={description}
           onChange={e => setDescription(e.target.value)}
           placeholder="What was this for?"
           required
-          className="flex-1 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm"
+          className="flex-1 px-3 py-2 text-sm"
         />
-        <input
+        <Input
           type="number"
           step="0.01"
           min="0"
@@ -78,7 +79,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
           onChange={e => setAmount(e.target.value)}
           placeholder="$0.00"
           required
-          className="w-24 px-3 py-2 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors text-sm text-right"
+          className="w-24 px-3 py-2 text-sm text-right"
         />
         <button
           type="submit"
@@ -89,7 +90,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
         </button>
       </form>
 
-        <ReceiptImportField onParsed={(items) => { setError(''); setPreview(items) }} />
+      <ReceiptImportField onParsed={(items) => { setError(''); setPreview(items) }} />
 
       {preview && (
         <div className="border border-border rounded-lg overflow-hidden">
@@ -124,9 +125,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
         </div>
       )}
 
-      {error && (
-        <p className="text-xs text-s-confirm-text">{error}</p>
-      )}
+      <ErrorMessage message={error} />
     </div>
   )
 }

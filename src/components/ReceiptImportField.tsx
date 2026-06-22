@@ -1,5 +1,6 @@
 'use client'
 import { useState, useRef } from 'react'
+import { ErrorMessage } from './ErrorMessage'
 
 type ParsedItem = { description: string; amountCents: number }
 
@@ -21,7 +22,6 @@ export function ReceiptImportField({ onParsed }: { onParsed: (items: ParsedItem[
       if (!res.ok) throw new Error()
       const { items } = await res.json()
       onParsed(items)
-      // Reset the picker so the same files aren't accidentally parsed twice.
       if (inputRef.current) inputRef.current.value = ''
       setFileCount(0)
     } catch {
@@ -52,7 +52,7 @@ export function ReceiptImportField({ onParsed }: { onParsed: (items: ParsedItem[
           {parsing ? 'Parsing...' : fileCount > 1 ? `Parse ${fileCount} receipts` : 'Parse receipt'}
         </button>
       </div>
-      {error && <p className="text-xs text-s-confirm-text mt-2">{error}</p>}
+      <ErrorMessage message={error} />
     </div>
   )
 }
