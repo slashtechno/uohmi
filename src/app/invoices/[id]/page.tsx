@@ -11,6 +11,8 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { CopyButton } from '@/components/CopyButton'
 import { DeleteInvoiceButton } from '@/components/DeleteInvoiceButton'
 import { SendReminderButton } from '@/components/SendReminderButton'
+import { ConfirmButton } from '@/components/ConfirmButton'
+import { MergeButton } from '@/components/MergeButton'
 import { Input } from '@/components/Input'
 import { formatMoney } from '@/lib/utils'
 import Link from 'next/link'
@@ -92,9 +94,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     redirect(`/invoices/${tab.id}`)
   }
 
-  async function handleMerge(formData: FormData) {
+  async function handleMerge(targetId: string) {
     'use server'
-    const targetId = formData.get('targetId') as string
     if (!targetId || targetId === tab.id) return
     const [source, target] = await Promise.all([getTabFull(tab.id), getTabFull(targetId)])
     if (!source || source.tab.status !== 'OPEN') return
@@ -229,24 +230,13 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       {tab.status === 'OPEN' && mergeTargets.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
           <h2 className="text-sm font-medium text-ink-2 mb-3">Merge into another invoice</h2>
-          <form action={handleMerge} className="flex gap-2">
-            <select
-              name="targetId"
-              className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-ink focus:outline-none focus:border-accent"
-            >
-              {mergeTargets.map(({ tab: t, total: tot }) => (
-                <option key={t.id} value={t.id}>
-                  {t.recipientName}{t.notes ? ` — ${t.notes}` : ''} ({formatMoney(tot)})
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-card border border-border text-ink text-sm font-medium rounded-lg hover:bg-card-hover transition-colors whitespace-nowrap"
-            >
-              Merge →
-            </button>
-          </form>
+          <MergeButton
+            targets={mergeTargets.map(({ tab: t, total: tot }) => ({
+              id: t.id,
+              label: `${t.recipientName}${t.notes ? ` — ${t.notes}` : ''} (${formatMoney(tot)})`,
+            }))}
+            action={handleMerge}
+          />
           <p className="text-xs text-ink-3 mt-2">This invoice&apos;s items and payments will move to the selected invoice, then this one will be deleted.</p>
         </div>
       )}
@@ -254,19 +244,27 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       {tab.status !== 'FORGIVEN' && (
         <div className="flex flex-col sm:flex-row gap-3">
           {tab.status === 'OPEN' && (
-            <form action={handleCloseTab} className="flex-1">
-              <button type="submit" className="w-full py-3 px-4 bg-accent text-white font-medium rounded-lg hover:bg-accent-dark transition-colors">
-                Close tab & send
-              </button>
-            </form>
+            <ConfirmButton
+              label="Close tab & send"
+              pendingLabel="Sending…"
+              modalTitle="Close tab & send"
+              modalMessage={`Finalize this invoice and send ${tab.recipientName} the total. They'll be able to pay via the link.`}
+              confirmLabel="Close & send"
+              className="flex-1 w-full py-3 px-4 bg-accent text-white font-medium rounded-lg hover:bg-accent-dark transition-colors"
+              action={handleCloseTab}
+            />
           )}
           {canRemind && <SendReminderButton action={handleSendReminder} />}
           {tab.status !== 'PAID' && (
-            <form action={handleForgive} className="flex-1">
-              <button type="submit" className="w-full py-3 px-4 bg-s-forgiven-bg text-s-forgiven-text font-medium rounded-lg hover:bg-card-hover transition-colors">
-                Forgive this one
-              </button>
-            </form>
+            <ConfirmButton
+              label="Forgive this one"
+              pendingLabel="Forgiving…"
+              modalTitle="Forgive invoice"
+              modalMessage={`Write off what ${tab.recipientName} owes? This can't be undone.`}
+              confirmLabel="Forgive"
+              className="flex-1 w-full py-3 px-4 bg-s-forgiven-bg text-s-forgiven-text font-medium rounded-lg hover:bg-card-hover transition-colors"
+              action={handleForgive}
+            />
           )}
           <div className="flex-1"><DeleteInvoiceButton action={handleDeleteTab} /></div>
         </div>
@@ -321,11 +319,15 @@ async function PaymentCard({ payment, tabId }: { payment: Payment; tabId: string
       )}
 
       {!payment.confirmed && (
-        <form action={handleConfirm}>
-          <button type="submit" className="w-full py-2 px-3 bg-s-paid-bg text-s-paid-text text-sm font-medium rounded-lg hover:bg-s-paid-bg/80 transition-colors">
-            Confirm payment
-          </button>
-        </form>
+        <ConfirmButton
+          label="Confirm payment"
+          pendingLabel="Confirming…"
+          modalTitle="Confirm payment"
+          modalMessage={`Mark this ${methodLabels[payment.method] || payment.method} payment of ${formatMoney(payment.amountCents)} as confirmed?`}
+          confirmLabel="Confirm"
+          className="w-full py-2 px-3 bg-s-paid-bg text-s-paid-text text-sm font-medium rounded-lg hover:bg-s-paid-bg/80 transition-colors"
+          action={handleConfirm}
+        />
       )}
     </div>
   )
