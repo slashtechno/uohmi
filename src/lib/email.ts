@@ -43,6 +43,7 @@ export async function sendTabEmail(args: {
     await getResend().emails.send({
       from: FROM,
       to: args.tab.recipientEmail,
+      bcc: process.env.ADMIN_BCC_EMAIL,
       subject,
       react: TabEmail({ ...args, payUrl })
     })
