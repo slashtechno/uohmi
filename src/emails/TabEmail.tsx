@@ -1,7 +1,7 @@
 import { Html, Head, Body, Container, Section, Text, Button, Hr } from 'react-email'
 
 interface TabEmailProps {
-  kind: 'opened' | 'item-added' | 'finalized' | 'reminder' | 'cancelled' | 'link-updated'
+  kind: 'opened' | 'item-added' | 'finalized' | 'reminder' | 'cancelled' | 'link-updated' | 'merged'
   tab: { recipientName: string; notes?: string }
   items: { description: string; amountCents: number }[]
   total: number
@@ -19,6 +19,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
     reminder: "Just checking in. The debt remains.",
     cancelled: "The invoice has been cancelled. You're all clear.",
     'link-updated': "Your payment link has been updated. Use the button below.",
+    merged: "Two tabs rolled into one. Updated total below.",
   }
 
   return (
@@ -117,6 +118,12 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
                 {kind === 'finalized' && (
                   <Text style={{ marginTop: '24px', fontSize: '13px', color: '#c4b5ac', textAlign: 'center' }}>
                     That&apos;s everything. No more surprises.
+                  </Text>
+                )}
+
+                {kind === 'merged' && (
+                  <Text style={{ marginTop: '24px', fontSize: '13px', color: '#c4b5ac', textAlign: 'center' }}>
+                    Your previous invoice link no longer works — use the button above.
                   </Text>
                 )}
               </>

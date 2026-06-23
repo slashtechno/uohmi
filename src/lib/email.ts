@@ -6,7 +6,7 @@ import { appUrl } from "./url"
 
 const FROM = process.env.RESEND_FROM_EMAIL || "uohmi <invoices@yourdomain.com>"
 
-type Kind = "opened" | "item-added" | "finalized" | "reminder" | "cancelled" | "link-updated"
+type Kind = "opened" | "item-added" | "finalized" | "reminder" | "cancelled" | "link-updated" | "merged"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY)
@@ -59,4 +59,5 @@ const subjects: Record<Kind, (total: number) => string> = {
   reminder: (t) => `Payment Due: $${(t / 100).toFixed(2)}`,
   cancelled: () => `Invoice Cancelled`,
   "link-updated": (t) => `Payment Link Updated — $${(t / 100).toFixed(2)}`,
+  merged: (t) => `Invoices Combined: $${(t / 100).toFixed(2)}`,
 }

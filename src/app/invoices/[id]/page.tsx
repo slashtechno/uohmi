@@ -100,6 +100,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     if (!source || source.tab.status !== 'OPEN') return
     if (!target || target.tab.status !== 'OPEN') return
     await mergeTabInto(tab.id, targetId)
+    if (target.tab.recipientEmail) {
+      const merged = await getTabFull(targetId)
+      if (merged) await sendTabEmail({ kind: 'merged', tab: merged.tab, items: merged.items, total: merged.total, balance: merged.balance }).catch(() => {})
+    }
     redirect(`/invoices/${targetId}`)
   }
 
@@ -264,7 +268,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               </button>
             </form>
           )}
-          <DeleteInvoiceButton action={handleDeleteTab} />
+          <div className="flex-1"><DeleteInvoiceButton action={handleDeleteTab} /></div>
         </div>
       )}
 
