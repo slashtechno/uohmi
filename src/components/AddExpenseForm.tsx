@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import { ReceiptImportField } from './ReceiptImportField'
 import { Input } from './Input'
 import { ErrorMessage } from './ErrorMessage'
@@ -31,6 +32,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
       setDescription('')
       setAmount('')
       router.refresh()
+      toast.success('Item added')
     } catch {
       setError('Failed to add item.')
     } finally {
@@ -51,6 +53,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
       if (!res.ok) throw new Error()
       setPreview(null)
       router.refresh()
+      toast.success(`${preview.length} items imported`)
     } catch {
       setError('Failed to import items.')
     } finally {

@@ -41,7 +41,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     const stillEditable = current.tab.status === 'OPEN' && current.payments.length === 0
     if (!itemBelongsHere || !stillEditable) return
     await deleteItem(itemId)
-    redirect(`/invoices/${tab.id}`)
+    redirect(`/invoices/${tab.id}?toast=Item+removed`)
   }
 
   async function handleDeleteTab() {
@@ -53,7 +53,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       await sendTabEmail({ kind: 'cancelled', tab: t, items, total, balance })
     }
     await deleteTabCascade(tab.id)
-    redirect('/')
+    redirect('/?toast=Invoice+deleted')
   }
 
   async function handleEditDetails(formData: FormData) {
@@ -65,7 +65,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       recipientEmail: formData.get('recipientEmail') as string,
       notes: formData.get('notes') as string,
     })
-    redirect(`/invoices/${tab.id}`)
+    redirect(`/invoices/${tab.id}?toast=Details+saved`)
   }
 
   async function handleSendReminder() {
@@ -73,7 +73,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     const current = await getTabFull(tab.id)
     if (!current || !['OPEN', 'CLOSED'].includes(current.tab.status)) return
     await sendReminder(tab.id)
-    redirect(`/invoices/${tab.id}`)
+    redirect(`/invoices/${tab.id}?toast=Reminder+sent`)
   }
 
   async function handleCloseTab() {
@@ -81,7 +81,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     const current = await getTabFull(tab.id)
     if (!current || current.tab.status !== 'OPEN') return
     await finalizeTab(tab.id)
-    redirect(`/invoices/${tab.id}`)
+    redirect(`/invoices/${tab.id}?toast=Tab+closed+%26+sent`)
   }
 
   async function handleRerollToken() {
@@ -91,7 +91,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     if (current && current.tab.recipientEmail) {
       await sendTabEmail({ kind: 'link-updated', tab: current.tab, items: current.items, total: current.total, balance: current.balance }).catch(() => {})
     }
-    redirect(`/invoices/${tab.id}`)
+    redirect(`/invoices/${tab.id}?toast=Payment+link+updated`)
   }
 
   async function handleMerge(targetId: string) {
@@ -101,11 +101,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     if (!source || source.tab.status === 'FORGIVEN') return
     if (!target || !['OPEN', 'CLOSED'].includes(target.tab.status)) return
     await mergeTabInto(tab.id, targetId)
+    let emailFailed = false
     if (target.tab.recipientEmail) {
       const merged = await getTabFull(targetId)
-      if (merged) await sendTabEmail({ kind: 'merged', tab: merged.tab, items: merged.items, total: merged.total, balance: merged.balance }).catch(() => {})
+      if (merged) await sendTabEmail({ kind: 'merged', tab: merged.tab, items: merged.items, total: merged.total, balance: merged.balance }).catch(() => { emailFailed = true })
     }
-    redirect(`/invoices/${targetId}`)
+    const toastMsg = emailFailed ? 'Merged+%E2%80%94+notification+email+failed' : 'Invoices+merged'
+    const toastKind = emailFailed ? '&toastKind=warning' : ''
+    redirect(`/invoices/${targetId}?toast=${toastMsg}${toastKind}`)
   }
 
   async function handleForgive() {
@@ -113,7 +116,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     const current = await getTabFull(tab.id)
     if (!current || ['PAID', 'FORGIVEN'].includes(current.tab.status)) return
     await updateTabStatus(tab.id, 'FORGIVEN')
-    redirect(`/invoices/${tab.id}`)
+    redirect(`/invoices/${tab.id}?toast=Invoice+forgiven`)
   }
 
   const payUrl = `${appUrl()}/pay/${tab.token}`
@@ -299,7 +302,7 @@ async function PaymentCard({ payment, tabId }: { payment: Payment; tabId: string
   async function handleConfirm() {
     'use server'
     await confirmPaymentAndMaybeClose(payment.id, tabId)
-    redirect(`/invoices/${tabId}`)
+    redirect(`/invoices/${tabId}?toast=Payment+confirmed`)
   }
 
   return (

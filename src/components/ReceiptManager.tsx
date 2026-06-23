@@ -1,8 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { Lightbox } from './Lightbox'
-import { ErrorMessage } from './ErrorMessage'
 
 interface ReceiptManagerProps {
   tabId: string
@@ -14,19 +14,17 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
   const [receipts, setReceipts] = useState(initialUrls)
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(file: File) {
     setUploading(true)
-    setError('')
     try {
       const presignRes = await fetch(`/api/invoices/${tabId}/receipts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mediaType: file.type }),
       })
-      if (!presignRes.ok) { setError('Failed to start upload.'); return }
+      if (!presignRes.ok) { toast.error('Failed to start upload.'); return }
       const { key, uploadUrl } = await presignRes.json()
 
       const putRes = await fetch(uploadUrl, {
@@ -40,15 +38,16 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ key }),
         })
-        setError('Upload failed. Please try again.')
+        toast.error('Upload failed. Please try again.')
         return
       }
 
       const urlRes = await fetch(`/api/files/${key.split('/').map(encodeURIComponent).join('/')}`)
       const url = urlRes.ok ? (await urlRes.json()).url : ''
       setReceipts(prev => [...prev, { key, url }])
+      toast.success('Receipt uploaded')
     } catch {
-      setError('Something went wrong. Please try again.')
+      toast.error('Something went wrong. Please try again.')
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -56,18 +55,18 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
   }
 
   async function handleRemove(key: string) {
-    setError('')
     try {
       const res = await fetch(`/api/invoices/${tabId}/receipts`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ key }),
       })
-      if (!res.ok) { setError('Failed to remove receipt.'); return }
+      if (!res.ok) { toast.error('Failed to remove receipt.'); return }
       setReceipts(prev => prev.filter(r => r.key !== key))
       if (lightbox === key) setLightbox(null)
+      toast.success('Receipt removed')
     } catch {
-      setError('Something went wrong. Please try again.')
+      toast.error('Something went wrong. Please try again.')
     }
   }
 
@@ -118,7 +117,6 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
           >
             {uploading ? 'Uploading…' : '+ Add receipt'}
           </button>
-          <ErrorMessage message={error} />
         </div>
       )}
 

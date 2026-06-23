@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Providers } from "@/components/Providers";
 import { Footer } from "@/components/Footer";
+import { ToastHandler } from "@/components/ToastHandler";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -36,6 +38,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-bg text-ink font-serif antialiased safe-bottom flex flex-col">
         <Providers>
+          <Suspense><ToastHandler /></Suspense>
           <div className="flex-1">
             {children}
           </div>

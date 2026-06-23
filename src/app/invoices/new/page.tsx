@@ -2,15 +2,14 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { ReceiptImportField } from '@/components/ReceiptImportField'
 import { Input } from '@/components/Input'
-import { ErrorMessage } from '@/components/ErrorMessage'
 import { formatMoney, parseMoney } from '@/lib/utils'
 
 export default function NewInvoicePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
   const [items, setItems] = useState([{ description: '', amountCents: 0 }])
   const [amountInputs, setAmountInputs] = useState([''])
   const [recipientName, setRecipientName] = useState('')
@@ -72,13 +71,12 @@ export default function NewInvoicePage() {
   }
 
   async function handleSubmit(finalize: boolean) {
-    setError('')
     if (!recipientName || !recipientEmail) {
-      setError('Recipient name and email are required.')
+      toast.error('Recipient name and email are required.')
       return
     }
     if (items.length === 0 || items.every(i => !i.description || i.amountCents === 0)) {
-      setError('Add at least one item with a description and amount.')
+      toast.error('Add at least one item with a description and amount.')
       return
     }
 
@@ -98,12 +96,12 @@ export default function NewInvoicePage() {
       })
       if (res.ok) {
         const { id } = await res.json()
-        router.push(`/invoices/${id}`)
+        router.push(`/invoices/${id}?toast=Invoice+created`)
       } else {
-        setError('Something went wrong. Try again.')
+        toast.error('Something went wrong. Try again.')
       }
     } catch {
-      setError('Something went wrong. Try again.')
+      toast.error('Something went wrong. Try again.')
     } finally {
       setLoading(false)
     }
@@ -236,8 +234,6 @@ export default function NewInvoicePage() {
             </div>
           )}
         </div>
-
-        <ErrorMessage message={error} />
 
         <div className="flex flex-col sm:flex-row gap-3">
           <button
