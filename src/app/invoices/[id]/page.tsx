@@ -1,4 +1,4 @@
-import { getTabFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade, getFileUrl, regenerateTabToken } from '@/lib/db'
+import { getTabFull, getTabsFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade, mergeTabInto, getFileUrl, regenerateTabToken } from '@/lib/db'
 import type { Payment } from '@/lib/db'
 import { appUrl } from '@/lib/url'
 import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/tabs'
@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const full = await getTabFull(id)
+  const [full, allTabsFull] = await Promise.all([getTabFull(id), getTabsFull()])
   if (!full) notFound()
 
   const { tab, items, payments, total, confirmedPaid, balance, hasUnconfirmed } = full
@@ -92,6 +92,17 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     redirect(`/invoices/${tab.id}`)
   }
 
+  async function handleMerge(formData: FormData) {
+    'use server'
+    const targetId = formData.get('targetId') as string
+    if (!targetId || targetId === tab.id) return
+    const [source, target] = await Promise.all([getTabFull(tab.id), getTabFull(targetId)])
+    if (!source || source.tab.status !== 'OPEN') return
+    if (!target || target.tab.status !== 'OPEN') return
+    await mergeTabInto(tab.id, targetId)
+    redirect(`/invoices/${targetId}`)
+  }
+
   async function handleForgive() {
     'use server'
     const current = await getTabFull(tab.id)
@@ -103,6 +114,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   const payUrl = `${appUrl()}/pay/${tab.token}`
   const canEdit = tab.status === 'OPEN'
   const canRemind = tab.status === 'OPEN' || tab.status === 'CLOSED'
+  const mergeTargets = allTabsFull.filter(f => f.tab.id !== tab.id && f.tab.status === 'OPEN')
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
@@ -207,6 +219,31 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               Save
             </button>
           </form>
+        </div>
+      )}
+
+      {tab.status === 'OPEN' && mergeTargets.length > 0 && (
+        <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
+          <h2 className="text-sm font-medium text-ink-2 mb-3">Merge into another invoice</h2>
+          <form action={handleMerge} className="flex gap-2">
+            <select
+              name="targetId"
+              className="flex-1 px-3 py-2 text-sm bg-card border border-border rounded-lg text-ink focus:outline-none focus:border-accent"
+            >
+              {mergeTargets.map(({ tab: t, total: tot }) => (
+                <option key={t.id} value={t.id}>
+                  {t.recipientName}{t.notes ? ` — ${t.notes}` : ''} ({formatMoney(tot)})
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-card border border-border text-ink text-sm font-medium rounded-lg hover:bg-card-hover transition-colors whitespace-nowrap"
+            >
+              Merge →
+            </button>
+          </form>
+          <p className="text-xs text-ink-3 mt-2">This invoice&apos;s items and payments will move to the selected invoice, then this one will be deleted.</p>
         </div>
       )}
 

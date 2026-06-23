@@ -162,6 +162,18 @@ export async function deleteTab(tabId: string) {
   await removeByField('Tabs', 'id', tabId)
 }
 
+export async function mergeTabInto(sourceId: string, targetId: string) {
+  const [sourceItems, sourcePayments] = await Promise.all([
+    getItems(sourceId),
+    getPayments(sourceId),
+  ])
+  await Promise.all([
+    ...sourceItems.map(i => updateByField('Items', 'id', i.id, { tabId: targetId })),
+    ...sourcePayments.map(p => updateByField('Payments', 'id', p.id, { tabId: targetId })),
+  ])
+  await removeByField('Tabs', 'id', sourceId)
+}
+
 export async function deleteTabCascade(tabId: string) {
   await Promise.all([
     removeByField('Items', 'tabId', tabId),
