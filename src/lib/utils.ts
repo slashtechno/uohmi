@@ -10,7 +10,6 @@ export function parseMoney(value: string): number {
 
 export function statusBadge(status: TabStatus, hasUnconfirmed?: boolean) {
   const badges: Record<TabStatus, { bg: string; text: string; label: string }> = {
-    DRAFT:    { bg: 'bg-s-draft-bg',    text: 'text-s-draft-text',    label: 'Draft' },
     OPEN:     { bg: 'bg-s-open-bg',     text: 'text-s-open-text',     label: 'Running tab' },
     CLOSED:   { bg: 'bg-s-closed-bg',   text: 'text-s-closed-text',   label: 'Awaiting payment' },
     PAID:     { bg: 'bg-s-paid-bg',     text: 'text-s-paid-text',     label: 'Paid ✓' },

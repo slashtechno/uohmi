@@ -29,14 +29,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     (tab.receiptFileKeys ?? []).map(async key => ({ key, url: (await getFileUrl(key)) ?? '' }))
   ).then(rs => rs.filter(r => r.url))
 
-  const canEditItems = tab.status === 'DRAFT' || (tab.status === 'OPEN' && payments.length === 0)
+  const canEditItems = tab.status === 'OPEN' && payments.length === 0
 
   async function handleDeleteItem(itemId: string) {
     'use server'
     const current = await getTabFull(tab.id)
     if (!current) return
     const itemBelongsHere = current.items.some(i => i.id === itemId)
-    const stillEditable = current.tab.status === 'DRAFT' || (current.tab.status === 'OPEN' && current.payments.length === 0)
+    const stillEditable = current.tab.status === 'OPEN' && current.payments.length === 0
     if (!itemBelongsHere || !stillEditable) return
     await deleteItem(itemId)
     redirect(`/invoices/${tab.id}`)
@@ -47,7 +47,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     const current = await getTabFull(tab.id)
     if (!current || current.tab.status === 'FORGIVEN') return
     const { tab: t, items, total, balance } = current
-    if (t.status !== 'DRAFT' && t.recipientEmail) {
+    if (t.recipientEmail) {
       await sendTabEmail({ kind: 'cancelled', tab: t, items, total, balance })
     }
     await deleteTabCascade(tab.id)
@@ -57,7 +57,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   async function handleEditDetails(formData: FormData) {
     'use server'
     const current = await getTabFull(tab.id)
-    if (!current || !['DRAFT', 'OPEN'].includes(current.tab.status)) return
+    if (!current || current.tab.status !== 'OPEN') return
     await updateTab(tab.id, {
       recipientName: formData.get('recipientName') as string,
       recipientEmail: formData.get('recipientEmail') as string,
@@ -74,10 +74,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     redirect(`/invoices/${tab.id}`)
   }
 
-  async function handleFinalize() {
+  async function handleCloseTab() {
     'use server'
     const current = await getTabFull(tab.id)
-    if (!current || current.tab.status !== 'DRAFT') return
+    if (!current || current.tab.status !== 'OPEN') return
     await finalizeTab(tab.id)
     redirect(`/invoices/${tab.id}`)
   }
@@ -101,7 +101,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   }
 
   const payUrl = `${appUrl()}/pay/${tab.token}`
-  const canEdit = tab.status === 'DRAFT' || tab.status === 'OPEN'
+  const canEdit = tab.status === 'OPEN'
   const canRemind = tab.status === 'OPEN' || tab.status === 'CLOSED'
 
   return (
@@ -125,20 +125,18 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </div>
         )}
 
-        {tab.status !== 'DRAFT' && (
-          <div className="mb-4">
-            <div className="flex items-center gap-2 p-2 bg-card-hover rounded-lg">
-              <span className="text-xs text-ink-3 truncate flex-1 font-mono">{payUrl}</span>
-              <CopyButton text={payUrl} />
-              <RerollTokenButton action={handleRerollToken} />
-            </div>
-            {(tab.receiptFileKeys?.length ?? 0) > 0 && (
-              <p className="text-xs text-ink-3 mt-1.5">
-                Invoicee can see {tab.receiptFileKeys!.length} receipt{tab.receiptFileKeys!.length !== 1 ? 's' : ''} via this link.
-              </p>
-            )}
+        <div className="mb-4">
+          <div className="flex items-center gap-2 p-2 bg-card-hover rounded-lg">
+            <span className="text-xs text-ink-3 truncate flex-1 font-mono">{payUrl}</span>
+            <CopyButton text={payUrl} />
+            <RerollTokenButton action={handleRerollToken} />
           </div>
-        )}
+          {(tab.receiptFileKeys?.length ?? 0) > 0 && (
+            <p className="text-xs text-ink-3 mt-1.5">
+              Invoicee can see {tab.receiptFileKeys!.length} receipt{tab.receiptFileKeys!.length !== 1 ? 's' : ''} via this link.
+            </p>
+          )}
+        </div>
 
         <div className="border-t border-border pt-4 mt-4">
           <div className="flex justify-between items-center mb-2">
@@ -214,10 +212,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
       {tab.status !== 'FORGIVEN' && (
         <div className="flex flex-col sm:flex-row gap-3">
-          {tab.status === 'DRAFT' && (
-            <form action={handleFinalize} className="flex-1">
+          {tab.status === 'OPEN' && (
+            <form action={handleCloseTab} className="flex-1">
               <button type="submit" className="w-full py-3 px-4 bg-accent text-white font-medium rounded-lg hover:bg-accent-dark transition-colors">
-                Finalize & send
+                Close tab & send
               </button>
             </form>
           )}
@@ -229,7 +227,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               </button>
             </form>
           )}
-          <DeleteInvoiceButton action={handleDeleteTab} isDraft={tab.status === 'DRAFT'} />
+          <DeleteInvoiceButton action={handleDeleteTab} />
         </div>
       )}
 

@@ -53,7 +53,7 @@ async function removeByField(table: string, field: string, value: string): Promi
 }
 
 
-export type TabStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'PAID' | 'FORGIVEN'
+export type TabStatus = 'OPEN' | 'CLOSED' | 'PAID' | 'FORGIVEN'
 
 export interface Tab {
   id: string; token: string
@@ -80,7 +80,7 @@ export async function createTab(input: {
 }): Promise<Tab> {
   const { nanoid } = await import('nanoid')
   const tab = {
-    id: nanoid(10), token: nanoid(16), status: 'DRAFT' as TabStatus,
+    id: nanoid(10), token: nanoid(16), status: 'OPEN' as TabStatus,
     createdAt: new Date().toISOString(),
     ...input,
   }

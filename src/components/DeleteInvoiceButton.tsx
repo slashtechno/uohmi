@@ -2,12 +2,10 @@
 import { useState } from 'react'
 import { Modal } from './Modal'
 
-export function DeleteInvoiceButton({ action, isDraft }: { action: () => Promise<void>; isDraft: boolean }) {
+export function DeleteInvoiceButton({ action }: { action: () => Promise<void> }) {
   const [open, setOpen] = useState(false)
-  const label = isDraft ? 'Delete draft' : 'Delete invoice'
-  const message = isDraft
-    ? 'Delete this draft? This cannot be undone.'
-    : 'Delete this invoice? The invoicee will be notified by email. This cannot be undone.'
+  const label = 'Delete invoice'
+  const message = 'Delete this invoice? The invoicee will be notified by email. This cannot be undone.'
 
   return (
     <>
