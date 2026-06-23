@@ -98,8 +98,8 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     'use server'
     if (!targetId || targetId === tab.id) return
     const [source, target] = await Promise.all([getTabFull(tab.id), getTabFull(targetId)])
-    if (!source || source.tab.status !== 'OPEN') return
-    if (!target || target.tab.status !== 'OPEN') return
+    if (!source || source.tab.status === 'FORGIVEN') return
+    if (!target || !['OPEN', 'CLOSED'].includes(target.tab.status)) return
     await mergeTabInto(tab.id, targetId)
     if (target.tab.recipientEmail) {
       const merged = await getTabFull(targetId)
@@ -119,7 +119,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   const payUrl = `${appUrl()}/pay/${tab.token}`
   const canEdit = tab.status === 'OPEN'
   const canRemind = tab.status === 'OPEN' || tab.status === 'CLOSED'
-  const mergeTargets = allTabsFull.filter(f => f.tab.id !== tab.id && f.tab.status === 'OPEN')
+  const mergeTargets = allTabsFull.filter(f => f.tab.id !== tab.id && ['OPEN', 'CLOSED'].includes(f.tab.status))
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
@@ -227,7 +227,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         </div>
       )}
 
-      {tab.status === 'OPEN' && mergeTargets.length > 0 && (
+      {tab.status !== 'FORGIVEN' && mergeTargets.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6">
           <h2 className="text-sm font-medium text-ink-2 mb-3">Merge into another invoice</h2>
           <MergeButton
