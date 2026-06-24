@@ -169,9 +169,11 @@ export async function mergeTabInto(sourceId: string, targetId: string) {
     getItems(sourceId),
     getPayments(sourceId),
   ])
+  if (!sourceTab) throw new Error(`mergeTabInto: source tab ${sourceId} not found`)
+  if (!targetTab) throw new Error(`mergeTabInto: target tab ${targetId} not found`)
   const mergedReceiptKeys = [
-    ...(targetTab?.receiptFileKeys ?? []),
-    ...(sourceTab?.receiptFileKeys ?? []),
+    ...(targetTab.receiptFileKeys ?? []),
+    ...(sourceTab.receiptFileKeys ?? []),
   ]
   await Promise.all([
     ...sourceItems.map(i => updateByField('Items', 'id', i.id, { tabId: targetId })),
