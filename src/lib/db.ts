@@ -163,13 +163,22 @@ export async function deleteTab(tabId: string) {
 }
 
 export async function mergeTabInto(sourceId: string, targetId: string) {
-  const [sourceItems, sourcePayments] = await Promise.all([
+  const [sourceTab, targetTab, sourceItems, sourcePayments] = await Promise.all([
+    getTab(sourceId),
+    getTab(targetId),
     getItems(sourceId),
     getPayments(sourceId),
   ])
+  const mergedReceiptKeys = [
+    ...(targetTab?.receiptFileKeys ?? []),
+    ...(sourceTab?.receiptFileKeys ?? []),
+  ]
   await Promise.all([
     ...sourceItems.map(i => updateByField('Items', 'id', i.id, { tabId: targetId })),
     ...sourcePayments.map(p => updateByField('Payments', 'id', p.id, { tabId: targetId })),
+    ...(mergedReceiptKeys.length > 0
+      ? [updateByField('Tabs', 'id', targetId, { receiptFileKeys: JSON.stringify(mergedReceiptKeys) })]
+      : []),
   ])
   await removeByField('Tabs', 'id', sourceId)
 }
@@ -282,4 +291,25 @@ export async function getFileUrl(key: string): Promise<string | null> {
 
 export async function deleteFile(key: string): Promise<void> {
   await fetch(`${BASE}/api/${APP}/files/${key}`, { method: 'DELETE', headers: H() }).catch(() => {})
+}
+
+export async function listFiles(): Promise<string[]> {
+  try {
+    const r = await fetch(`${BASE}/api/${APP}/files`, { headers: H(), cache: 'no-store' })
+    if (!r.ok) return []
+    const data = await r.json()
+    // GSDB may return [{key: '...'}, ...] or ['...', ...]
+    if (Array.isArray(data)) {
+      return data.map((item: unknown) =>
+        typeof item === 'string' ? item : (item as Record<string, string>).key ?? ''
+      ).filter(Boolean)
+    }
+    return []
+  } catch { return [] }
+}
+
+export async function getOrphanedFileKeys(): Promise<string[]> {
+  const [allTabs, allKeys] = await Promise.all([getTabs(), listFiles()])
+  const referencedKeys = new Set(allTabs.flatMap(t => t.receiptFileKeys ?? []))
+  return allKeys.filter(k => k.startsWith('receipts/') && !referencedKeys.has(k))
 }

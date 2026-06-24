@@ -1,15 +1,16 @@
-import { getTabsFull } from '@/lib/db'
+import { getTabsFull, getOrphanedFileKeys } from '@/lib/db'
 import { StatusBadge } from '@/components/StatusBadge'
 import { formatMoney, timeAgo } from '@/lib/utils'
 import Link from 'next/link'
 import type { Tab, Item, Payment } from '@/lib/db'
+import { OrphanedFilesManager } from '@/components/OrphanedFilesManager'
 
 export const dynamic = 'force-dynamic'
 
 type FullTab = { tab: Tab; items: Item[]; payments: Payment[]; total: number; confirmedPaid: number; balance: number; hasUnconfirmed: boolean }
 
 export default async function DashboardPage() {
-  const fulls = await getTabsFull()
+  const [fulls, orphanedFileKeys] = await Promise.all([getTabsFull(), getOrphanedFileKeys()])
 
   const totalOutstanding = fulls
     .filter(f => f.tab.status !== 'FORGIVEN' && f.tab.status !== 'PAID')
@@ -46,6 +47,12 @@ export default async function DashboardPage() {
           <InvoiceCard key={full.tab.id} full={full} />
         ))}
       </div>
+
+      {orphanedFileKeys.length > 0 && (
+        <div className="mt-8">
+          <OrphanedFilesManager initialOrphans={orphanedFileKeys} />
+        </div>
+      )}
     </main>
   )
 }
