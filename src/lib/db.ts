@@ -296,18 +296,22 @@ export async function deleteFile(key: string): Promise<void> {
 }
 
 export async function listFiles(): Promise<string[]> {
+  const keys: string[] = []
+  let startAfter: string | undefined
   try {
-    const r = await fetch(`${BASE}/api/${APP}/files`, { headers: H(), cache: 'no-store' })
-    if (!r.ok) return []
-    const data = await r.json()
-    // GSDB may return [{key: '...'}, ...] or ['...', ...]
-    if (Array.isArray(data)) {
-      return data.map((item: unknown) =>
-        typeof item === 'string' ? item : (item as Record<string, string>).key ?? ''
-      ).filter(Boolean)
+    while (true) {
+      const url = new URL(`${BASE}/api/${APP}/files`)
+      if (startAfter) url.searchParams.set('start_after', startAfter)
+      const r = await fetch(url.toString(), { headers: H(), cache: 'no-store' })
+      if (!r.ok) break
+      const data = await r.json() as { files: { key: string }[]; truncated: boolean; next_start_after?: string }
+      keys.push(...data.files.map(f => f.key))
+      if (!data.truncated) break
+      startAfter = data.next_start_after
+      if (!startAfter) break
     }
-    return []
-  } catch { return [] }
+  } catch { /* storage not configured or unreachable — return what we have */ }
+  return keys
 }
 
 export async function getOrphanedFileKeys(): Promise<string[]> {
