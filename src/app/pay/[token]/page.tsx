@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { after } from 'next/server'
-import { getTabByToken, getItems, getPayments, getFileUrl } from '@/lib/db'
+import { getTabByToken, getItems, getPayments } from '@/lib/db'
 import { notifications } from '@/lib/notify'
 import { formatMoney } from '@/lib/utils'
 import { ConfettiTrigger } from './ConfettiTrigger'
@@ -18,9 +18,10 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
   const confirmedPaid = payments.filter(p => p.confirmed).reduce((s, p) => s + p.amountCents, 0)
   const balance = total - confirmedPaid
 
-  const receiptUrls = await Promise.all(
-    (tab.receiptFileKeys ?? []).map(async key => ({ key, url: (await getFileUrl(key)) ?? '' }))
-  ).then(rs => rs.filter(r => r.url))
+  const receiptUrls = (tab.receiptFileKeys ?? []).map(key => ({
+    key,
+    url: `/api/files/${key.split('/').map(encodeURIComponent).join('/')}`,
+  }))
 
   if (tab.status === 'PAID') {
     return (

@@ -1,4 +1,4 @@
-import { getTabFull, getTabsFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade, mergeTabInto, getFileUrl, regenerateTabToken } from '@/lib/db'
+import { getTabFull, getTabsFull, updateTabStatus, updateTab, deleteItem, deleteTabCascade, mergeTabInto, regenerateTabToken } from '@/lib/db'
 import type { Payment } from '@/lib/db'
 import { appUrl } from '@/lib/url'
 import { confirmPaymentAndMaybeClose, sendReminder, finalizeTab } from '@/lib/tabs'
@@ -27,9 +27,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   const { tab, items, payments, total, confirmedPaid, balance, hasUnconfirmed } = full
 
-  const receiptUrls = await Promise.all(
-    (tab.receiptFileKeys ?? []).map(async key => ({ key, url: (await getFileUrl(key)) ?? '' }))
-  ).then(rs => rs.filter(r => r.url))
+  const receiptUrls = (tab.receiptFileKeys ?? []).map(key => ({
+    key,
+    url: `/api/files/${key.split('/').map(encodeURIComponent).join('/')}`,
+  }))
 
   const canEditItems = tab.status === 'OPEN' && payments.length === 0
 

@@ -42,9 +42,8 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
         return
       }
 
-      const urlRes = await fetch(`/api/files/${key.split('/').map(encodeURIComponent).join('/')}`)
-      const url = urlRes.ok ? (await urlRes.json()).url : ''
-      setReceipts(prev => [...prev, { key, url }])
+      const proxyUrl = `/api/files/${key.split('/').map(encodeURIComponent).join('/')}`
+      setReceipts(prev => [...prev, { key, url: proxyUrl }])
       toast.success('Receipt uploaded')
     } catch {
       toast.error('Something went wrong. Please try again.')
