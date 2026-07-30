@@ -12,9 +12,9 @@ type FullTab = { tab: Tab; items: Item[]; payments: Payment[]; total: number; co
 export default async function DashboardPage() {
   const [fulls, orphanedFileKeys] = await Promise.all([getTabsFull(), getOrphanedFileKeys()])
 
-  const totalOutstanding = fulls
-    .filter(f => f.tab.status !== 'FORGIVEN' && f.tab.status !== 'PAID')
-    .reduce((s, f) => s + f.balance, 0)
+  const active = fulls.filter(f => f.tab.status !== 'FORGIVEN' && f.tab.status !== 'PAID')
+  const archived = fulls.filter(f => f.tab.status === 'FORGIVEN' || f.tab.status === 'PAID')
+  const totalOutstanding = active.reduce((s, f) => s + f.balance, 0)
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
@@ -46,11 +46,29 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {fulls.length > 0 && active.length === 0 && (
+        <p className="text-ink-2 text-sm mb-3">All settled up. See below for history.</p>
+      )}
+
       <div className="space-y-3">
-        {fulls.map((full) => (
+        {active.map((full) => (
           <InvoiceCard key={full.tab.id} full={full} />
         ))}
       </div>
+
+      {archived.length > 0 && (
+        <details className="mt-6 group">
+          <summary className="cursor-pointer text-sm font-medium text-ink-2 hover:text-ink select-none list-none flex items-center gap-1.5">
+            <span className="transition-transform group-open:rotate-90">▸</span>
+            Archived ({archived.length})
+          </summary>
+          <div className="space-y-3 mt-3">
+            {archived.map((full) => (
+              <InvoiceCard key={full.tab.id} full={full} />
+            ))}
+          </div>
+        </details>
+      )}
 
       {orphanedFileKeys.length > 0 && (
         <div className="mt-8">
