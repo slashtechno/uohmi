@@ -1,8 +1,9 @@
 import { Html, Head, Body, Container, Section, Text, Button, Hr } from 'react-email'
+import { getBrand } from '@/lib/branding'
 
 interface TabEmailProps {
   kind: 'opened' | 'item-added' | 'finalized' | 'reminder' | 'cancelled' | 'link-updated' | 'merged'
-  tab: { recipientName: string; notes?: string }
+  tab: { recipientName: string; notes?: string; mode?: string | null }
   items: { description: string; amountCents: number }[]
   total: number
   balance: number
@@ -12,14 +13,15 @@ interface TabEmailProps {
 
 export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: TabEmailProps) {
   const format = (cents: number) => `$${(cents / 100).toFixed(2)}`
+  const brand = getBrand(tab.mode)
   const preheaders: Record<typeof kind, string> = {
-    opened: "I'll add expenses as they come. Pay when convenient.",
-    'item-added': `Just added: ${latest}. Running total below.`,
-    finalized: "That's everything. No more surprises.",
-    reminder: "Just checking in. The debt remains.",
-    cancelled: "The invoice has been cancelled. You're all clear.",
-    'link-updated': "Your payment link has been updated. Use the button below.",
-    merged: "Two tabs rolled into one. Updated total below.",
+    opened: brand.emailPreheaders.opened,
+    'item-added': brand.emailPreheaders['item-added'](latest ?? ''),
+    finalized: brand.emailPreheaders.finalized,
+    reminder: brand.emailPreheaders.reminder,
+    cancelled: brand.emailPreheaders.cancelled,
+    'link-updated': brand.emailPreheaders['link-updated'],
+    merged: brand.emailPreheaders.merged,
   }
 
   return (
@@ -28,8 +30,8 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
       <Body style={{ fontFamily: 'Georgia, Times New Roman, serif', backgroundColor: '#faf8f5', color: '#2c2825' }}>
         <Container style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 20px' }}>
           <Section style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '32px', border: '1px solid #e5ddd6' }}>
-            <Text style={{ fontSize: '24px', fontWeight: 'bold', color: '#c4847a', marginBottom: '16px', fontFamily: 'Georgia, serif' }}>
-              uohmi
+            <Text style={{ fontSize: '24px', fontWeight: 'bold', color: brand.accent.base, marginBottom: '16px', fontFamily: 'Georgia, serif' }}>
+              {brand.name}
             </Text>
             <Text style={{ fontSize: '16px', lineHeight: '1.6', marginBottom: '24px' }}>
               {preheaders[kind]}
@@ -41,8 +43,8 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
                   Hi {tab.recipientName}, the invoice sent to you has been cancelled. You don&apos;t owe anything.
                 </Text>
                 {tab.notes && (
-                  <Section style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#fdf0ee', borderRadius: '8px' }}>
-                    <Text style={{ fontSize: '14px', color: '#a8685e', fontStyle: 'italic' }}>&ldquo;{tab.notes}&rdquo;</Text>
+                  <Section style={{ marginBottom: '24px', padding: '16px', backgroundColor: brand.accent.bg, borderRadius: '8px' }}>
+                    <Text style={{ fontSize: '14px', color: brand.accent.dark, fontStyle: 'italic' }}>&ldquo;{tab.notes}&rdquo;</Text>
                   </Section>
                 )}
                 <Text style={{ fontSize: '14px', color: '#7c6e67', fontStyle: 'italic' }}>
@@ -53,7 +55,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
               <>
                 {kind === 'opened' && (
                   <Text style={{ fontSize: '14px', color: '#7c6e67', marginBottom: '24px', fontStyle: 'italic' }}>
-                    An itemized record of your generosity.
+                    {brand.emailOpener}
                   </Text>
                 )}
 
@@ -70,7 +72,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
 
                 <Section style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
                   <Text style={{ fontSize: '16px', fontWeight: '500' }}>Total</Text>
-                  <Text style={{ fontSize: '18px', fontWeight: 'bold', color: '#c4847a' }}>{format(total)}</Text>
+                  <Text style={{ fontSize: '18px', fontWeight: 'bold', color: brand.accent.base }}>{format(total)}</Text>
                 </Section>
 
                 {balance < total && (
@@ -86,8 +88,8 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
                 </Section>
 
                 {tab.notes && (
-                  <Section style={{ marginTop: '24px', padding: '16px', backgroundColor: '#fdf0ee', borderRadius: '8px' }}>
-                    <Text style={{ fontSize: '14px', color: '#a8685e', fontStyle: 'italic' }}>&ldquo;{tab.notes}&rdquo;</Text>
+                  <Section style={{ marginTop: '24px', padding: '16px', backgroundColor: brand.accent.bg, borderRadius: '8px' }}>
+                    <Text style={{ fontSize: '14px', color: brand.accent.dark, fontStyle: 'italic' }}>&ldquo;{tab.notes}&rdquo;</Text>
                   </Section>
                 )}
 
@@ -95,7 +97,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
                   <Button
                     href={payUrl}
                     style={{
-                      backgroundColor: '#c4847a',
+                      backgroundColor: brand.accent.base,
                       color: '#ffffff',
                       padding: '16px 32px',
                       borderRadius: '8px',
@@ -117,7 +119,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
 
                 {kind === 'finalized' && (
                   <Text style={{ marginTop: '24px', fontSize: '13px', color: '#c4b5ac', textAlign: 'center' }}>
-                    That&apos;s everything. No more surprises.
+                    {brand.emailPreheaders.finalized}
                   </Text>
                 )}
 
@@ -131,7 +133,7 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
           </Section>
 
           <Text style={{ marginTop: '24px', fontSize: '12px', color: '#c4b5ac', textAlign: 'center' }}>
-            Sent via uohmi — for when they said they&apos;d pay you back.
+            {brand.emailFooterTagline}
           </Text>
         </Container>
       </Body>

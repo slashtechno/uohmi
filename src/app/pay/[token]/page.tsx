@@ -3,6 +3,7 @@ import { after } from 'next/server'
 import { getTabByToken, getItems, getPayments } from '@/lib/db'
 import { notifications } from '@/lib/notify'
 import { formatMoney } from '@/lib/utils'
+import { getBrand } from '@/lib/branding'
 import { ConfettiTrigger } from './ConfettiTrigger'
 import { PayForm } from './PayForm'
 
@@ -23,24 +24,26 @@ export default async function PayPage({ params }: { params: Promise<{ token: str
     url: `/api/files/${key.split('/').map(encodeURIComponent).join('/')}`,
   }))
 
+  const brand = getBrand(tab.mode)
+
   if (tab.status === 'PAID') {
     return (
-      <main className="max-w-md mx-auto px-4 py-16 md:py-24">
+      <main data-mode={tab.mode} className="max-w-md mx-auto px-4 py-16 md:py-24">
         <ConfettiTrigger />
         <div className="bg-card border border-border rounded-xl p-6 text-center animate-fade-in">
           <p className="text-4xl mb-4">✅</p>
           <h2 className="text-xl font-bold text-ink font-serif mb-2">Already paid</h2>
-          <p className="text-ink-2">Settled. You&apos;re free. Your conscience is clean.</p>
+          <p className="text-ink-2">{brand.alreadyPaid}</p>
         </div>
       </main>
     )
   }
 
   return (
-    <main className="max-w-md mx-auto px-4 py-8 md:py-12">
+    <main data-mode={tab.mode} className="max-w-md mx-auto px-4 py-8 md:py-12">
       <div className="bg-card border border-border rounded-xl p-4 md:p-6 mb-6 animate-fade-in">
-        <h1 className="text-2xl font-bold text-accent font-serif mb-2">uohmi</h1>
-        <p className="text-ink-2 mb-6">A legally questionable record of kindness.</p>
+        <h1 className="text-2xl font-bold text-accent font-serif mb-2">{brand.name}</h1>
+        <p className="text-ink-2 mb-6">{brand.payPageTagline}</p>
 
         <div className="mb-6">
           <div className="space-y-2 mb-4">

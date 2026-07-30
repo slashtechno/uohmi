@@ -37,7 +37,11 @@ export default function LoginPage() {
   return (
     <main className="max-w-md mx-auto px-4 py-16 md:py-24">
       <div className="bg-card border border-border rounded-xl p-6 md:p-8 animate-fade-in">
-        <h1 className="text-3xl font-bold text-accent mb-2 font-serif">uohmi</h1>
+        <h1 className="text-3xl font-bold mb-2 font-serif">
+          <span className="text-accent">uohmi</span>{' '}
+          <span className="text-ink-3">/</span>{' '}
+          <span className="text-accent-spotmi">spotmi</span>
+        </h1>
         <p className="text-ink-2 mb-8">Sign in to your invoicing dashboard</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

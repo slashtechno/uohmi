@@ -15,6 +15,7 @@ import { ConfirmButton } from '@/components/ConfirmButton'
 import { MergeButton } from '@/components/MergeButton'
 import { Input } from '@/components/Input'
 import { formatMoney } from '@/lib/utils'
+import { resolveMode } from '@/lib/branding'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -65,6 +66,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
       recipientName: formData.get('recipientName') as string,
       recipientEmail: formData.get('recipientEmail') as string,
       notes: formData.get('notes') as string,
+      mode: resolveMode(formData.get('mode') as string),
     })
     redirect(`/invoices/${tab.id}?toast=Details+saved`)
   }
@@ -126,7 +128,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   const mergeTargets = allTabsFull.filter(f => f.tab.id !== tab.id && ['OPEN', 'CLOSED'].includes(f.tab.status))
 
   return (
-    <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
+    <main data-mode={tab.mode} className="max-w-2xl mx-auto px-4 py-8 md:py-12">
       <Link href="/" className="text-accent hover:text-accent-dark text-sm mb-4 inline-block">
         ← Back to dashboard
       </Link>
@@ -224,6 +226,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               <Input name="recipientEmail" type="email" defaultValue={tab.recipientEmail} placeholder="Email" required className="flex-1 px-3 py-2 text-sm" />
             </div>
             <Input name="notes" defaultValue={tab.notes ?? ''} placeholder="Note (optional)" className="w-full px-3 py-2 text-sm" />
+            <select
+              name="mode"
+              defaultValue={tab.mode}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-card text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
+            >
+              <option value="spotmi">spotmi — they offered to cover this</option>
+              <option value="uohmi">uohmi — you fronted it</option>
+            </select>
             <button type="submit" className="px-4 py-2 bg-card border border-border text-ink text-sm font-medium rounded-lg hover:bg-card-hover transition-colors">
               Save
             </button>

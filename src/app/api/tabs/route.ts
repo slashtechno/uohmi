@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createTab, addItem, uploadFile, addTabReceiptKey } from '@/lib/db'
 import { sendTab, finalizeTab } from '@/lib/tabs'
+import { resolveMode } from '@/lib/branding'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { recipientName, recipientEmail, notes, items, receipts, finalize } = body
+  const { recipientName, recipientEmail, notes, items, receipts, finalize, mode } = body
 
   if (!recipientName || !recipientEmail) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
-  const tab = await createTab({ recipientName, recipientEmail, notes })
+  const tab = await createTab({ recipientName, recipientEmail, notes, mode: resolveMode(mode) })
 
   if (items && items.length > 0) {
     for (const item of items) {

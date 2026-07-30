@@ -20,7 +20,11 @@ export default async function DashboardPage() {
     <main className="max-w-2xl mx-auto px-4 py-8 md:py-12">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-accent font-serif">uohmi</h1>
+          <h1 className="text-3xl font-bold font-serif">
+            <span className="text-accent">uohmi</span>{' '}
+            <span className="text-ink-3">/</span>{' '}
+            <span className="text-accent-spotmi">spotmi</span>
+          </h1>
           <p className="text-ink-2 mt-1">
             {fulls.length === 0
               ? "No invoices yet. Either your friends pay instantly, or you haven't started."

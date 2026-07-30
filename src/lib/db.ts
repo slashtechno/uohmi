@@ -1,3 +1,5 @@
+import { type Mode, DEFAULT_MODE, resolveMode } from './branding'
+
 const BASE = (process.env.GSDB_URL ?? '').replace(/\/$/, '')
 const APP  = process.env.GSDB_APP_ID ?? ''
 const KEY  = process.env.GSDB_API_KEY ?? ''
@@ -59,6 +61,7 @@ export interface Tab {
   id: string; token: string
   recipientName: string; recipientEmail: string
   status: TabStatus
+  mode: Mode
   notes?: string; receiptFileKeys?: string[]
   createdAt: string; closedAt?: string
   _row: number
@@ -71,17 +74,23 @@ function coerceTab(r: any): Tab {
   if (typeof raw === 'string' && raw.length > 0) {
     try { receiptFileKeys = JSON.parse(raw) as string[] } catch { receiptFileKeys = [raw] }
   }
-  const { ...rest } = r
-  return { ...rest, ...(receiptFileKeys ? { receiptFileKeys } : {}) } as unknown as Tab
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { receiptFileKeys: _raw, ...rest } = r
+  return {
+    ...rest,
+    mode: resolveMode(r.mode),
+    ...(receiptFileKeys ? { receiptFileKeys } : {}),
+  } as unknown as Tab
 }
 
 export async function createTab(input: {
-  recipientName: string; recipientEmail: string; notes?: string
+  recipientName: string; recipientEmail: string; notes?: string; mode?: Mode
 }): Promise<Tab> {
   const { nanoid } = await import('nanoid')
   const tab = {
     id: nanoid(10), token: nanoid(16), status: 'OPEN' as TabStatus,
     createdAt: new Date().toISOString(),
+    mode: DEFAULT_MODE,
     ...input,
   }
   await append('Tabs', tab as unknown as Record<string, unknown>)
@@ -128,7 +137,7 @@ export async function regenerateTabToken(id: string): Promise<string> {
   return token
 }
 
-export async function updateTab(id: string, fields: { recipientName?: string; recipientEmail?: string; notes?: string }) {
+export async function updateTab(id: string, fields: { recipientName?: string; recipientEmail?: string; notes?: string; mode?: Mode }) {
   await updateByField('Tabs', 'id', id, fields)
 }
 

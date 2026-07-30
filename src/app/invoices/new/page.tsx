@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { ReceiptImportField } from '@/components/ReceiptImportField'
 import { Input } from '@/components/Input'
 import { formatMoney, parseMoney } from '@/lib/utils'
+import { DEFAULT_MODE, type Mode } from '@/lib/branding'
 
 export default function NewInvoicePage() {
   const router = useRouter()
@@ -16,6 +17,7 @@ export default function NewInvoicePage() {
   const [recipientEmail, setRecipientEmail] = useState('')
   const [notes, setNotes] = useState('')
   const [receipts, setReceipts] = useState<{ base64: string; mediaType: string }[]>([])
+  const [mode, setMode] = useState<Mode>(DEFAULT_MODE)
 
   const total = items.reduce((sum, i) => sum + i.amountCents, 0)
 
@@ -92,6 +94,7 @@ export default function NewInvoicePage() {
           items: items.filter(i => i.description && i.amountCents > 0),
           receipts,
           finalize,
+          mode,
         }),
       })
       if (res.ok) {
@@ -158,6 +161,26 @@ export default function NewInvoicePage() {
               rows={2}
               className="w-full px-4 py-3 border border-border rounded-lg bg-card text-ink placeholder-ink-3 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors resize-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink-2 mb-1">Tone</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMode('spotmi')}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors ${mode === 'spotmi' ? 'border-accent-spotmi bg-accent-spotmi-bg text-accent-spotmi-dark' : 'border-border text-ink-2 hover:bg-card-hover'}`}
+              >
+                spotmi — they offered to cover this
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('uohmi')}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors ${mode === 'uohmi' ? 'border-accent bg-accent-bg text-accent-dark' : 'border-border text-ink-2 hover:bg-card-hover'}`}
+              >
+                uohmi — you fronted it
+              </button>
+            </div>
           </div>
         </div>
 
