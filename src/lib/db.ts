@@ -14,7 +14,7 @@ type Row = Record<string, unknown> & { _row: number }
 
 async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
   if (!BASE || !APP || !KEY) throw new Error(`gsdb: missing config (BASE/APP/KEY)`)
-  const r = await fetch(`${BASE}/api/${APP}/${table}`, { headers: H(), cache: 'no-store' })
+  const r = await fetch(`${BASE}/api/v1/${APP}/${table}`, { headers: H(), cache: 'no-store' })
   if (!r.ok) throw new Error(`gsdb GET ${table} → ${r.status}`)
   const data = await r.json()
   if (!Array.isArray(data)) throw new Error(`gsdb GET ${table}: expected array, got ${typeof data}`)
@@ -23,7 +23,7 @@ async function all<T = Row>(table: string): Promise<(T & { _row: number })[]> {
 
 async function byField<T = Row>(table: string, field: string, value: string): Promise<(T & { _row: number })[]> {
   if (!BASE || !APP || !KEY) return []
-  const r = await fetch(`${BASE}/api/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
+  const r = await fetch(`${BASE}/api/v1/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
     headers: H(), cache: 'no-store',
   })
   if (!r.ok) throw new Error(`gsdb GET ${table}/by/${field}/${value} → ${r.status}`)
@@ -34,21 +34,21 @@ async function byField<T = Row>(table: string, field: string, value: string): Pr
 
 async function append(table: string, row: Record<string, unknown>): Promise<void> {
   if (!BASE || !APP || !KEY) throw new Error(`gsdb: missing config (BASE/APP/KEY)`)
-  const r = await fetch(`${BASE}/api/${APP}/${table}`, {
+  const r = await fetch(`${BASE}/api/v1/${APP}/${table}`, {
     method: 'POST', headers: H(), body: JSON.stringify(row),
   })
   if (!r.ok) throw new Error(`gsdb POST ${table} → ${r.status}`)
 }
 
 async function updateByField(table: string, field: string, value: string, fields: Record<string, unknown>): Promise<void> {
-  const r = await fetch(`${BASE}/api/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
+  const r = await fetch(`${BASE}/api/v1/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
     method: 'PATCH', headers: H(), body: JSON.stringify(fields),
   })
   if (!r.ok) throw new Error(`gsdb PATCH ${table}/by/${field}/${value} → ${r.status}`)
 }
 
 async function removeByField(table: string, field: string, value: string): Promise<void> {
-  const r = await fetch(`${BASE}/api/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
+  const r = await fetch(`${BASE}/api/v1/${APP}/${table}/by/${field}/${encodeURIComponent(value)}`, {
     method: 'DELETE', headers: H(),
   })
   if (!r.ok) throw new Error(`gsdb DELETE ${table}/by/${field}/${value} → ${r.status}`)
@@ -263,7 +263,7 @@ export async function getTabsFull() {
 
 export async function getUploadPresignUrl(key: string): Promise<string | null> {
   try {
-    const r = await fetch(`${BASE}/api/${APP}/files/${key}/presign`, { method: 'POST', headers: H() })
+    const r = await fetch(`${BASE}/api/v1/${APP}/files/${key}/presign`, { method: 'POST', headers: H() })
     if (!r.ok) return null
     const { url } = await r.json()
     return url as string
@@ -293,7 +293,7 @@ export async function uploadFile(key: string, bytes: Buffer, contentType: string
 
 export async function getFileUrl(key: string): Promise<string | null> {
   try {
-    const r = await fetch(`${BASE}/api/${APP}/files/${key}`, { headers: H() })
+    const r = await fetch(`${BASE}/api/v1/${APP}/files/${key}`, { headers: H() })
     if (!r.ok) return null
     const { url } = await r.json()
     return url as string
@@ -301,7 +301,7 @@ export async function getFileUrl(key: string): Promise<string | null> {
 }
 
 export async function deleteFile(key: string): Promise<void> {
-  await fetch(`${BASE}/api/${APP}/files/${key}`, { method: 'DELETE', headers: H() }).catch(() => {})
+  await fetch(`${BASE}/api/v1/${APP}/files/${key}`, { method: 'DELETE', headers: H() }).catch(() => {})
 }
 
 export async function listFiles(): Promise<string[]> {
@@ -309,7 +309,7 @@ export async function listFiles(): Promise<string[]> {
   let startAfter: string | undefined
   try {
     while (true) {
-      const url = new URL(`${BASE}/api/${APP}/files`)
+      const url = new URL(`${BASE}/api/v1/${APP}/files`)
       if (startAfter) url.searchParams.set('start_after', startAfter)
       const r = await fetch(url.toString(), { headers: H(), cache: 'no-store' })
       if (!r.ok) break
