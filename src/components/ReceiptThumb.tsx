@@ -15,7 +15,8 @@ interface ReceiptThumbProps {
 
 /** Image thumbnail (opens lightbox) or PDF tile (opens in a new tab). Retries a failed image once. */
 export function ReceiptThumb({ fileKey, url, previewUrl, sizeClass, onOpen }: ReceiptThumbProps) {
-  const [retried, setRetried] = useState(false)
+  // Storage/sheet reads can lag a second or two behind an upload, so retry a few times with backoff.
+  const [attempt, setAttempt] = useState(0)
   const base = `${sizeClass} rounded-lg border border-border hover:opacity-90 transition-opacity`
 
   if (isPdfKey(fileKey)) {
@@ -32,14 +33,14 @@ export function ReceiptThumb({ fileKey, url, previewUrl, sizeClass, onOpen }: Re
     )
   }
 
-  const src = previewUrl ?? (retried ? `${url}?r=1` : url)
+  const src = previewUrl ?? (attempt > 0 ? `${url}?r=${attempt}` : url)
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
       alt="Receipt"
       onClick={onOpen}
-      onError={() => { if (!previewUrl && !retried) setTimeout(() => setRetried(true), 1500) }}
+      onError={() => { if (!previewUrl && attempt < 3) setTimeout(() => setAttempt(a => a + 1), 1500 * (attempt + 1)) }}
       className={`${base} object-cover cursor-zoom-in`}
     />
   )

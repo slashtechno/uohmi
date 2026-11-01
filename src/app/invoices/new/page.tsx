@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { ReceiptImportField } from '@/components/ReceiptImportField'
 import { Input } from '@/components/Input'
 import { formatMoney, parseMoney } from '@/lib/utils'
+import { uploadReceipt } from '@/lib/upload-receipt'
 import { DEFAULT_MODE, type Mode } from '@/lib/branding'
 
 export default function NewInvoicePage() {
@@ -16,7 +17,7 @@ export default function NewInvoicePage() {
   const [recipientName, setRecipientName] = useState('')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [notes, setNotes] = useState('')
-  const [receipts, setReceipts] = useState<{ base64: string; mediaType: string }[]>([])
+  const [receipts, setReceipts] = useState<File[]>([])
   const [mode, setMode] = useState<Mode>(DEFAULT_MODE)
 
   const total = items.reduce((sum, i) => sum + i.amountCents, 0)
@@ -47,15 +48,8 @@ export default function NewInvoicePage() {
   }
 
   // Appends (never replaces) so files attached by hand and files from "Import from receipts" coexist.
-  async function addReceiptFiles(files: File[]) {
-    if (!files.length) return
-    const added = await Promise.all(files.map(file => new Promise<{ base64: string; mediaType: string }>((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve({ base64: (reader.result as string).split(',')[1], mediaType: file.type })
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })))
-    setReceipts(prev => [...prev, ...added])
+  function addReceiptFiles(files: File[]) {
+    if (files.length) setReceipts(prev => [...prev, ...files])
   }
 
   function handleImportedItems(parsed: { description: string; amountCents: number }[]) {
@@ -91,17 +85,29 @@ export default function NewInvoicePage() {
           recipientEmail,
           notes,
           items: items.filter(i => i.description && i.amountCents > 0),
-          receipts,
           finalize,
           mode,
+          send: false,
         }),
       })
-      if (res.ok) {
-        const { id } = await res.json()
-        router.push(`/invoices/${id}?toast=Invoice+created`)
-      } else {
-        toast.error('Something went wrong. Try again.')
-      }
+      if (!res.ok) { toast.error('Something went wrong. Try again.'); return }
+      const { id } = await res.json()
+
+      // Attachments go straight to storage (no request-size limit), and the email is sent only
+      // after every upload has settled so its "N receipts attached" note is accurate.
+      const uploads = await Promise.allSettled(receipts.map(f => uploadReceipt(id, f)))
+      const failed = uploads.filter(u => u.status === 'rejected').length
+      const sendRes = await fetch(`/api/tabs/${id}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ finalize }),
+      }).catch(() => null)
+
+      const problems = [
+        failed > 0 && `${failed} attachment${failed > 1 ? 's' : ''} failed — add ${failed > 1 ? 'them' : 'it'} from the invoice page`,
+        !sendRes?.ok && "the email didn't send — resend it from the invoice page",
+      ].filter(Boolean).join('; ')
+      router.push(`/invoices/${id}?toast=${encodeURIComponent(problems ? `Invoice created, but ${problems}` : 'Invoice created')}`)
     } catch {
       toast.error('Something went wrong. Try again.')
     } finally {

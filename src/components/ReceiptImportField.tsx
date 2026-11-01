@@ -1,13 +1,21 @@
 'use client'
 import { useState, useRef } from 'react'
 import { ErrorMessage } from './ErrorMessage'
+import { shrinkForParsing } from '@/lib/shrink-image'
 
 type ParsedItem = { description: string; amountCents: number }
 
 // Vercel caps request bodies at 4.5 MB, so each file goes in its own request (a few at a time).
 const CONCURRENCY = 3
 
-async function parseOne(file: File): Promise<ParsedItem[]> {
+// Leave headroom under 4.5 MB for multipart overhead.
+const MAX_PARSE_BYTES = 4_000_000
+
+async function parseOne(original: File): Promise<ParsedItem[]> {
+  const file = await shrinkForParsing(original)
+  if (file.size > MAX_PARSE_BYTES) {
+    throw new Error('too large to parse — attach it instead')
+  }
   const form = new FormData()
   form.append('receipts', file)
   const res = await fetch('/api/receipts/parse', { method: 'POST', body: form })

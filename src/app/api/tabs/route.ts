@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createTab, addItem, uploadFile, addTabReceiptKey } from '@/lib/db'
+import { createTab, addItem } from '@/lib/db'
 import { sendTab, finalizeTab } from '@/lib/tabs'
 import { resolveMode } from '@/lib/branding'
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { recipientName, recipientEmail, notes, items, receipts, finalize, mode } = body
+  const { recipientName, recipientEmail, notes, items, finalize, mode, send } = body
 
   if (!recipientName || !recipientEmail) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -19,20 +19,8 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (Array.isArray(receipts) && receipts.length > 0) {
-    for (let i = 0; i < receipts.length; i++) {
-      const { base64, mediaType } = receipts[i]
-      if (!base64 || !mediaType) continue
-      const ext = mediaType.split('/')[1] ?? 'png'
-      const key = await uploadFile(
-        `receipts/${tab.id}-${i}.${ext}`,
-        Buffer.from(base64, 'base64'), mediaType
-      )
-      if (key) await addTabReceiptKey(tab.id, key)
-    }
-  }
-
-  await (finalize ? finalizeTab : sendTab)(tab.id, finalize)
+  // send: false lets the client upload attachments first, then send via /api/tabs/[id]/send.
+  if (send !== false) await (finalize ? finalizeTab : sendTab)(tab.id, finalize)
 
   return NextResponse.json({ id: tab.id, token: tab.token })
 }

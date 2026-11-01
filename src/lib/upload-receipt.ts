@@ -6,6 +6,7 @@ export async function uploadReceipt(tabId: string, file: File): Promise<{ key: s
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ mediaType: file.type }),
   })
+  if (presignRes.status === 415) throw new Error('Unsupported file type.')
   if (!presignRes.ok) throw new Error('Failed to start upload.')
   const { key, uploadUrl } = await presignRes.json()
 
