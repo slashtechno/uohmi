@@ -1,9 +1,9 @@
-// Two invoicing tones. spotmi is the default — softer, for when the debt came from an
+// Two invoicing tones. defraymi is the default — softer, for when the debt came from an
 // offer ("get it, I got you") or just needs a low-key nudge. uohmi is opt-in, for when
 // you fronted money unprompted and want the classic, pointed framing.
-export type Mode = 'uohmi' | 'spotmi'
+export type Mode = 'uohmi' | 'defraymi'
 
-export const DEFAULT_MODE: Mode = 'spotmi'
+export const DEFAULT_MODE: Mode = 'defraymi'
 
 interface Brand {
   name: string
@@ -45,8 +45,8 @@ const brands: Record<Mode, Brand> = {
     emailFooterTagline: 'Sent via uohmi — memory is fallible, receipts are not.',
     accent: { base: '#c4847a', dark: '#a8685e', bg: '#fdf0ee' },
   },
-  spotmi: {
-    name: 'spotmi',
+  defraymi: {
+    name: 'defraymi',
     payPageTagline: 'Just keeping track, nothing serious.',
     alreadyPaid: 'Paid, appreciate it!',
     emailOpener: 'A quick tally of the damage.',
@@ -56,7 +56,7 @@ const brands: Record<Mode, Brand> = {
       finalized: "That's the full total — nothing more coming.",
       reminder: "Friendly nudge — this one's still open.",
     },
-    emailFooterTagline: 'Sent via spotmi — because I might forget.',
+    emailFooterTagline: 'Sent via defraymi — because I might forget.',
     accent: { base: '#7a9cc4', dark: '#5e7ea8', bg: '#eef3fb' },
   },
 }

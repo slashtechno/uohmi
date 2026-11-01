@@ -23,7 +23,7 @@ export default async function DashboardPage() {
           <h1 className="text-3xl font-bold font-serif">
             <span className="text-accent">uohmi</span>{' '}
             <span className="text-ink-3">/</span>{' '}
-            <span className="text-accent-spotmi">spotmi</span>
+            <span className="text-accent-defraymi">defraymi</span>
           </h1>
           <p className="text-ink-2 mt-1">
             {fulls.length === 0

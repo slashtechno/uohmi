@@ -20,10 +20,10 @@
   --accent-dark: #a8685e;
   --accent-bg:   #fdf0ee;
 
-  /* Brand accent — dusty blue (spotmi) */
-  --accent-spotmi:      #7a9cc4;
-  --accent-spotmi-dark: #5e7ea8;
-  --accent-spotmi-bg:   #eef3fb;
+  /* Brand accent — dusty blue (defraymi) */
+  --accent-defraymi:      #7a9cc4;
+  --accent-defraymi-dark: #5e7ea8;
+  --accent-defraymi-bg:   #eef3fb;
 
   /* Status: DRAFT */
   --s-draft-bg:    #f3f0ec;
@@ -50,12 +50,12 @@
   --s-confirm-text:  #a04030;
 }
 
-/* Scoped brand-color override for spotmi-mode invoices — every existing
+/* Scoped brand-color override for defraymi-mode invoices — every existing
    text-accent/bg-accent usage picks this up automatically via the cascade. */
-[data-mode="spotmi"] {
-  --accent:      var(--accent-spotmi);
-  --accent-dark: var(--accent-spotmi-dark);
-  --accent-bg:   var(--accent-spotmi-bg);
+[data-mode="defraymi"] {
+  --accent:      var(--accent-defraymi);
+  --accent-dark: var(--accent-defraymi-dark);
+  --accent-bg:   var(--accent-defraymi-bg);
 }
 
 @theme inline {
@@ -68,9 +68,9 @@
   --color-accent: var(--accent);
   --color-accent-dark: var(--accent-dark);
   --color-accent-bg: var(--accent-bg);
-  --color-accent-spotmi: var(--accent-spotmi);
-  --color-accent-spotmi-dark: var(--accent-spotmi-dark);
-  --color-accent-spotmi-bg: var(--accent-spotmi-bg);
+  --color-accent-defraymi: var(--accent-defraymi);
+  --color-accent-defraymi-dark: var(--accent-defraymi-dark);
+  --color-accent-defraymi-bg: var(--accent-defraymi-bg);
   
   --color-s-draft-bg: var(--s-draft-bg);
   --color-s-draft-text: var(--s-draft-text);

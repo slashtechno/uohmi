@@ -168,10 +168,10 @@ export default function NewInvoicePage() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setMode('spotmi')}
-                className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors ${mode === 'spotmi' ? 'border-accent-spotmi bg-accent-spotmi-bg text-accent-spotmi-dark' : 'border-border text-ink-2 hover:bg-card-hover'}`}
+                onClick={() => setMode('defraymi')}
+                className={`flex-1 py-2 px-3 text-sm font-medium rounded-lg border transition-colors ${mode === 'defraymi' ? 'border-accent-defraymi bg-accent-defraymi-bg text-accent-defraymi-dark' : 'border-border text-ink-2 hover:bg-card-hover'}`}
               >
-                spotmi — they offered to cover this
+                defraymi — they offered to cover this
               </button>
               <button
                 type="button"

@@ -231,7 +231,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               defaultValue={tab.mode}
               className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-card text-ink focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-bg transition-colors"
             >
-              <option value="spotmi">spotmi — they offered to cover this</option>
+              <option value="defraymi">defraymi — they offered to cover this</option>
               <option value="uohmi">uohmi — you fronted it</option>
             </select>
             <button type="submit" className="px-4 py-2 bg-card border border-border text-ink text-sm font-medium rounded-lg hover:bg-card-hover transition-colors">

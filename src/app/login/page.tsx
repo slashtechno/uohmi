@@ -40,7 +40,7 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold mb-2 font-serif">
           <span className="text-accent">uohmi</span>{' '}
           <span className="text-ink-3">/</span>{' '}
-          <span className="text-accent-spotmi">spotmi</span>
+          <span className="text-accent-defraymi">defraymi</span>
         </h1>
         <p className="text-ink-2 mb-8">Sign in to your invoicing dashboard</p>
 
