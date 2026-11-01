@@ -46,17 +46,16 @@ export default function NewInvoicePage() {
     setItems(updated)
   }
 
-  function handleReceiptFiles(files: FileList | null) {
-    if (!files?.length) return
-    setReceipts([])
-    Promise.all(Array.from(files).map(file => new Promise<string>((resolve, reject) => {
+  // Appends (never replaces) so files attached by hand and files from "Import from receipts" coexist.
+  async function addReceiptFiles(files: File[]) {
+    if (!files.length) return
+    const added = await Promise.all(files.map(file => new Promise<{ base64: string; mediaType: string }>((resolve, reject) => {
       const reader = new FileReader()
-      reader.onload = () => resolve((reader.result as string).split(',')[1])
+      reader.onload = () => resolve({ base64: (reader.result as string).split(',')[1], mediaType: file.type })
       reader.onerror = reject
       reader.readAsDataURL(file)
-    }))).then(b64s => {
-      setReceipts(b64s.map((base64, i) => ({ base64, mediaType: files[i].type })))
-    })
+    })))
+    setReceipts(prev => [...prev, ...added])
   }
 
   function handleImportedItems(parsed: { description: string; amountCents: number }[]) {
@@ -185,12 +184,12 @@ export default function NewInvoicePage() {
         </div>
 
         <div className="mb-4 space-y-3">
-          <ReceiptImportField onParsed={(parsed) => { if (parsed?.length) handleImportedItems(parsed) }} />
+          <ReceiptImportField onParsed={(parsed, files) => { if (parsed?.length) handleImportedItems(parsed); addReceiptFiles(files) }} />
           <div className="p-3 bg-card-hover rounded-lg border border-border">
             <label className="text-xs font-medium text-ink-2 mb-2 block">Attach receipts (images or PDF)</label>
             <input
               type="file" accept="image/*,application/pdf" multiple
-              onChange={(e) => handleReceiptFiles(e.target.files)}
+              onChange={(e) => { addReceiptFiles(Array.from(e.target.files ?? [])); e.target.value = '' }}
               className="w-full text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
             />
             {receipts.length > 0 && (

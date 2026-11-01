@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Lightbox } from './Lightbox'
 import { ReceiptThumb, isPdfKey } from './ReceiptThumb'
+import { uploadReceipt } from '@/lib/upload-receipt'
 
 interface ReceiptManagerProps {
   tabId: string
@@ -17,39 +18,18 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  async function handleUpload(file: File) {
+  async function handleUpload(files: File[]) {
     setUploading(true)
     try {
-      const presignRes = await fetch(`/api/invoices/${tabId}/receipts`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mediaType: file.type }),
-      })
-      if (!presignRes.ok) { toast.error('Failed to start upload.'); return }
-      const { key, uploadUrl } = await presignRes.json()
-
-      const putRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      })
-      if (!putRes.ok) {
-        await fetch(`/api/invoices/${tabId}/receipts`, {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key }),
-        })
-        toast.error('Upload failed. Please try again.')
-        return
-      }
-
-      const proxyUrl = `/api/files/${key.split('/').map(encodeURIComponent).join('/')}`
-      // Show the local file right away so the thumbnail never races the proxy/storage write-lag.
-      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
-      setReceipts(prev => [...prev, { key, url: proxyUrl, previewUrl }])
-      toast.success('Receipt uploaded')
-    } catch {
-      toast.error('Something went wrong. Please try again.')
+      const results = await Promise.allSettled(files.map(async (file) => {
+        const { key, url } = await uploadReceipt(tabId, file)
+        // Show the local file right away so the thumbnail never races the proxy/storage write-lag.
+        const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+        setReceipts(prev => [...prev, { key, url, previewUrl }])
+      }))
+      const failed = results.length - results.filter(r => r.status === 'fulfilled').length
+      if (failed > 0) toast.error(`${failed} upload${failed > 1 ? 's' : ''} failed. Please try again.`)
+      else toast.success(files.length > 1 ? `${files.length} receipts uploaded` : 'Receipt uploaded')
     } finally {
       setUploading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -107,15 +87,16 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
             ref={inputRef}
             type="file"
             accept="image/*,application/pdf"
+            multiple
             className="hidden"
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f) }}
+            onChange={e => { const fs = Array.from(e.target.files ?? []); if (fs.length) handleUpload(fs) }}
           />
           <button
             onClick={() => inputRef.current?.click()}
             disabled={uploading}
             className="px-3 py-1.5 bg-card border border-border text-ink text-sm rounded-lg hover:bg-card-hover transition-colors disabled:opacity-50"
           >
-            {uploading ? 'Uploading…' : '+ Add receipt or PDF'}
+            {uploading ? 'Uploading…' : '+ Add receipts or PDFs'}
           </button>
         </div>
       )}

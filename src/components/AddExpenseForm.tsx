@@ -6,6 +6,7 @@ import { ReceiptImportField } from './ReceiptImportField'
 import { Input } from './Input'
 import { ErrorMessage } from './ErrorMessage'
 import { parseMoney } from '@/lib/utils'
+import { uploadReceipt } from '@/lib/upload-receipt'
 
 type ParsedItem = { description: string; amountCents: number }
 
@@ -15,6 +16,7 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
   const [amount, setAmount] = useState('')
   const [adding, setAdding] = useState(false)
   const [preview, setPreview] = useState<ParsedItem[] | null>(null)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [error, setError] = useState('')
 
   async function handleAdd(e: React.FormEvent) {
@@ -52,8 +54,13 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
       })
       if (!res.ok) throw new Error()
       setPreview(null)
+      // Attach only now (not at parse time) so Discard never leaves orphaned uploads.
+      const uploads = await Promise.allSettled(pendingFiles.map(f => uploadReceipt(tabId, f)))
+      const failed = uploads.filter(u => u.status === 'rejected').length
+      setPendingFiles([])
       router.refresh()
-      toast.success(`${preview.length} items imported`)
+      if (failed > 0) toast.error(`${preview.length} items imported; ${failed} attachment${failed > 1 ? 's' : ''} failed`)
+      else toast.success(`${preview.length} items imported${pendingFiles.length ? ` and ${pendingFiles.length} attached` : ''}`)
     } catch {
       setError('Failed to import items.')
     } finally {
@@ -93,16 +100,18 @@ export function AddExpenseForm({ tabId }: { tabId: string }) {
         </button>
       </form>
 
-      <ReceiptImportField onParsed={(items) => { setError(''); setPreview(items) }} />
+      <ReceiptImportField onParsed={(items, files) => { setError(''); setPreview(items); setPendingFiles(files) }} />
 
       {preview && (
         <div className="border border-border rounded-lg overflow-hidden">
           <div className="bg-card-hover px-3 py-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-ink-2">{preview.length} items found</span>
+            <span className="text-xs font-medium text-ink-2">
+              {preview.length} items found{pendingFiles.length > 0 && ` · ${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''} will be attached`}
+            </span>
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setPreview(null)}
+                onClick={() => { setPreview(null); setPendingFiles([]) }}
                 className="text-xs text-ink-3 hover:text-ink transition-colors"
               >
                 Discard
