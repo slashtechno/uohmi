@@ -195,11 +195,14 @@ export async function mergeTabInto(sourceId: string, targetId: string) {
 }
 
 export async function deleteTabCascade(tabId: string) {
+  const tab = await getTab(tabId)
   await Promise.all([
     removeByField('Items', 'tabId', tabId),
     removeByField('Payments', 'tabId', tabId),
   ])
   await deleteTab(tabId)
+  // Attachments belong to the invoice; don't leave them behind in storage.
+  await Promise.all((tab?.receiptFileKeys ?? []).map(deleteFile))
 }
 
 export async function deletePayment(paymentId: string) {
@@ -319,8 +322,10 @@ export async function deleteFile(key: string): Promise<void> {
   await fetch(`${BASE}/api/v1/${APP}/files/${key}`, { method: 'DELETE', headers: H() }).catch(() => {})
 }
 
-export async function listFiles(): Promise<string[]> {
-  const keys: string[] = []
+export interface StoredFile { key: string; lastModified: number }
+
+export async function listFiles(): Promise<StoredFile[]> {
+  const files: StoredFile[] = []
   let startAfter: string | undefined
   try {
     while (true) {
@@ -328,19 +333,31 @@ export async function listFiles(): Promise<string[]> {
       if (startAfter) url.searchParams.set('start_after', startAfter)
       const r = await fetch(url.toString(), { headers: H(), cache: 'no-store' })
       if (!r.ok) break
-      const data = await r.json() as { files: { key: string }[]; truncated: boolean; next_start_after?: string }
-      keys.push(...data.files.map(f => f.key))
+      const data = await r.json() as { files: { key: string; last_modified?: string }[]; truncated: boolean; next_start_after?: string }
+      files.push(...data.files.map(f => ({ key: f.key, lastModified: Date.parse(f.last_modified ?? '') || 0 })))
       if (!data.truncated) break
       startAfter = data.next_start_after
       if (!startAfter) break
     }
   } catch { /* storage not configured or unreachable — return what we have */ }
-  return keys
+  return files
 }
 
+// staging/ files are deleted right after parsing; any older than this were abandoned mid-flight
+// (e.g. the tab was closed between the upload and the parse request).
+const STAGING_MAX_AGE = 60 * 60 * 1000
+
 export async function getOrphanedFileKeys(): Promise<string[]> {
-  const [allTabs, allKeys] = await Promise.all([getTabs(), listFiles()])
+  const [allTabs, files] = await Promise.all([getTabs(), listFiles()])
   const referencedKeys = new Set(allTabs.flatMap(t => t.receiptFileKeys ?? []))
-  // staging/ files are deleted right after parsing, so any that remain were abandoned mid-flight.
-  return allKeys.filter(k => k.startsWith('staging/') || (k.startsWith('receipts/') && !referencedKeys.has(k)))
+  const now = Date.now()
+  return files.map(f => f.key).filter(k => k.startsWith('receipts/') && !referencedKeys.has(k))
+    .concat(files.filter(f => f.key.startsWith('staging/') && now - f.lastModified > STAGING_MAX_AGE).map(f => f.key))
+}
+
+/** Deletes abandoned staging/ files. Safe to call often; in-flight ones are younger than the cutoff. */
+export async function sweepStagingFiles(): Promise<void> {
+  const now = Date.now()
+  const stale = (await listFiles()).filter(f => f.key.startsWith('staging/') && now - f.lastModified > STAGING_MAX_AGE)
+  await Promise.all(stale.map(f => deleteFile(f.key)))
 }
