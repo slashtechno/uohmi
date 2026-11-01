@@ -105,7 +105,7 @@ export default function NewInvoicePage() {
 
       const problems = [
         failed > 0 && `${failed} attachment${failed > 1 ? 's' : ''} failed — add ${failed > 1 ? 'them' : 'it'} from the invoice page`,
-        !sendRes?.ok && "the email didn't send — resend it from the invoice page",
+        !sendRes?.ok && "the email didn't send — use Send reminder on the invoice page",
       ].filter(Boolean).join('; ')
       router.push(`/invoices/${id}?toast=${encodeURIComponent(problems ? `Invoice created, but ${problems}` : 'Invoice created')}`)
     } catch {

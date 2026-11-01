@@ -28,6 +28,7 @@ async function getCachedFileUrl(fileKey: string): Promise<string | null> {
   return url ?? null
 }
 
+const REDIRECT_OVER = 4_000_000
 const NO_STORE = { 'Cache-Control': 'no-store' }
 const notFound = () => NextResponse.json({ error: 'Not found' }, { status: 404, headers: NO_STORE })
 
@@ -52,13 +53,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ key
   // A miss may just be a stale cache entry (file uploaded after it was cached), so refetch once.
   let receiptKeys = await getTabReceiptKeys(tabId)
   if (!receiptKeys.includes(fileKey)) receiptKeys = await getTabReceiptKeys(tabId, true)
+  // The sheet can lag a second or two behind a fresh upload, so give it one more chance before 404ing.
+  if (!receiptKeys.includes(fileKey)) {
+    await new Promise(r => setTimeout(r, 1500))
+    receiptKeys = await getTabReceiptKeys(tabId, true)
+  }
   if (!receiptKeys.includes(fileKey)) return notFound()
 
   const contentType = TYPE_BY_EXT[fileKey.split('.').pop()?.toLowerCase() ?? '']
   if (!contentType) return notFound()
   const isPdf = contentType === 'application/pdf'
 
-  const presignedUrl = await getCachedFileUrl(fileKey)
+  let presignedUrl = await getCachedFileUrl(fileKey)
+  if (!presignedUrl) {
+    await new Promise(r => setTimeout(r, 1500))
+    presignedUrl = await getCachedFileUrl(fileKey)
+  }
   if (!presignedUrl) return notFound()
 
   // Proxy the image content — retries handle S3 write-lag on slow/home-network backends
@@ -67,6 +77,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ key
     try {
       const upstream = await fetch(presignedUrl)
       if (!upstream.ok) continue
+      // Vercel caps function response bodies at 4.5 MB. Direct uploads have no size limit, so send big files
+      // to storage directly. Never cache the redirect: the presigned URL expires.
+      if (Number(upstream.headers.get('content-length')) > REDIRECT_OVER) {
+        await upstream.body?.cancel()
+        return NextResponse.redirect(presignedUrl, { status: 302, headers: NO_STORE })
+      }
       const body = await upstream.arrayBuffer()
       return new NextResponse(body, {
         headers: {
