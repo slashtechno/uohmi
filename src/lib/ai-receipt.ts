@@ -22,10 +22,13 @@ function getModel() {
   return "openai/gpt-5-nano"
 }
 
+/** Safe-to-show-the-user failure (as opposed to provider/gateway errors, which stay server-side). */
+export class UnsupportedReceiptError extends Error {}
+
 export async function parseReceipt(image: ArrayBuffer, mediaType = "image/png"): Promise<{ items: { description: string; amountCents: number }[] }> {
   const isPdf = mediaType === "application/pdf"
   if (isPdf && process.env.OPENAI_BASE_URL) {
-    throw new Error("PDF receipts aren't supported with a custom OPENAI_BASE_URL model; upload an image instead.")
+    throw new UnsupportedReceiptError("PDF receipts aren't supported with a custom OPENAI_BASE_URL model; upload an image instead.")
   }
   const agent = new ToolLoopAgent({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

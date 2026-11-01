@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isAuthenticated } from '@/lib/auth'
-import { parseReceipt } from '@/lib/ai-receipt'
+import { parseReceipt, UnsupportedReceiptError } from '@/lib/ai-receipt'
 
 export async function POST(req: NextRequest) {
   if (!await isAuthenticated()) {
@@ -18,7 +18,11 @@ export async function POST(req: NextRequest) {
       files.map(async (file) => parseReceipt(await file.arrayBuffer(), file.type))
     )
   } catch (e) {
-    return NextResponse.json({ error: e instanceof Error ? e.message : 'Parse failed' }, { status: 502 })
+    if (e instanceof UnsupportedReceiptError) {
+      return NextResponse.json({ error: e.message }, { status: 422 })
+    }
+    console.error('Receipt parse failed:', e)
+    return NextResponse.json({ error: 'Could not parse receipt.' }, { status: 502 })
   }
   const items = results.flatMap((r) => r.items)
   return NextResponse.json({ items })
