@@ -12,9 +12,14 @@ export async function POST(req: NextRequest) {
   if (files.length === 0) return NextResponse.json({ error: 'No files provided' }, { status: 400 })
 
   // Parse each receipt in parallel and merge the line items into a single flat list.
-  const results = await Promise.all(
-    files.map(async (file) => parseReceipt(await file.arrayBuffer(), file.type))
-  )
+  let results
+  try {
+    results = await Promise.all(
+      files.map(async (file) => parseReceipt(await file.arrayBuffer(), file.type))
+    )
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Parse failed' }, { status: 502 })
+  }
   const items = results.flatMap((r) => r.items)
   return NextResponse.json({ items })
 }

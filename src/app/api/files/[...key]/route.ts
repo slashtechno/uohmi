@@ -46,8 +46,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ key
   }
 
   // Verify the key actually belongs to a tab (prevents fishing for arbitrary S3 objects)
-  const tabId = fileKey.split('/')[1]?.split('-')[0]
-  if (!tabId) return notFound()
+  // Tab ids are fixed-length nanoid(10) and may themselves contain '-', so slice rather than split.
+  const tabId = fileKey.split('/')[1]?.slice(0, 10)
+  if (!tabId || tabId.length < 10) return notFound()
   // A miss may just be a stale cache entry (file uploaded after it was cached), so refetch once.
   let receiptKeys = await getTabReceiptKeys(tabId)
   if (!receiptKeys.includes(fileKey)) receiptKeys = await getTabReceiptKeys(tabId, true)

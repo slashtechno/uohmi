@@ -19,13 +19,13 @@ export function ReceiptImportField({ onParsed }: { onParsed: (items: ParsedItem[
       const form = new FormData()
       for (const file of files) form.append('receipts', file)
       const res = await fetch('/api/receipts/parse', { method: 'POST', body: form })
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error)
       const { items } = await res.json()
       onParsed(items)
       if (inputRef.current) inputRef.current.value = ''
       setFileCount(0)
-    } catch {
-      setError('Could not parse receipt.')
+    } catch (e) {
+      setError(e instanceof Error && e.message ? e.message : 'Could not parse receipt.')
     } finally {
       setParsing(false)
     }
