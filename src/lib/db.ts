@@ -300,6 +300,21 @@ export async function getFileUrl(key: string): Promise<string | null> {
   } catch { return null }
 }
 
+// Server-side read of a stored file. Storage can lag a second or two behind a fresh upload (presign or
+// GET fails briefly), so retry with backoff for ~5s before giving up.
+export async function downloadFile(key: string): Promise<ArrayBuffer | null> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 500 * attempt))
+    const url = await getFileUrl(key)
+    if (!url) continue
+    try {
+      const r = await fetch(url, { cache: 'no-store' })
+      if (r.ok) return await r.arrayBuffer()
+    } catch { /* retry */ }
+  }
+  return null
+}
+
 export async function deleteFile(key: string): Promise<void> {
   await fetch(`${BASE}/api/v1/${APP}/files/${key}`, { method: 'DELETE', headers: H() }).catch(() => {})
 }
@@ -326,5 +341,6 @@ export async function listFiles(): Promise<string[]> {
 export async function getOrphanedFileKeys(): Promise<string[]> {
   const [allTabs, allKeys] = await Promise.all([getTabs(), listFiles()])
   const referencedKeys = new Set(allTabs.flatMap(t => t.receiptFileKeys ?? []))
-  return allKeys.filter(k => k.startsWith('receipts/') && !referencedKeys.has(k))
+  // staging/ files are deleted right after parsing, so any that remain were abandoned mid-flight.
+  return allKeys.filter(k => k.startsWith('staging/') || (k.startsWith('receipts/') && !referencedKeys.has(k)))
 }

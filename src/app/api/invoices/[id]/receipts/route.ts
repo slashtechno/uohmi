@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ALLOWED_TYPES } from '@/lib/receipt-types'
 import { getTab, getUploadPresignUrl, addTabReceiptKey, removeTabReceiptKey, deleteFile } from '@/lib/db'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const tab = await getTab(id)
   if (!tab) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-
-  const ALLOWED_TYPES: Record<string, string> = {
-    'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf',
-  }
 
   const { mediaType } = await req.json()
   if (!mediaType) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })

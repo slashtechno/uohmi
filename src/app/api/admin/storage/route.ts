@@ -8,7 +8,7 @@ export async function GET() {
 
 export async function DELETE(req: NextRequest) {
   const { key } = await req.json()
-  if (!key || typeof key !== 'string' || !key.startsWith('receipts/')) {
+  if (!key || typeof key !== 'string' || !(key.startsWith('receipts/') || key.startsWith('staging/'))) {
     return NextResponse.json({ error: 'Invalid key' }, { status: 400 })
   }
   // Re-verify it's still an orphan at delete time

@@ -1,27 +1,32 @@
 'use client'
 import { useState, useRef } from 'react'
 import { ErrorMessage } from './ErrorMessage'
-import { shrinkForParsing } from '@/lib/shrink-image'
 
 type ParsedItem = { description: string; amountCents: number }
 
-// Vercel caps request bodies at 4.5 MB, so each file goes in its own request (a few at a time).
+// A few files are staged and parsed at a time.
 const CONCURRENCY = 3
 
-// Leave headroom under 4.5 MB for multipart overhead.
-const MAX_PARSE_BYTES = 4_000_000
+// Stage the file in storage (direct from the browser, so there's no function request-size limit),
+// then have the server parse it by key. The server deletes the staged file when it's done.
+async function parseOne(file: File): Promise<ParsedItem[]> {
+  const stage = await fetch('/api/receipts/uploads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mediaType: file.type }),
+  })
+  if (!stage.ok) throw new Error(stage.status === 415 ? 'unsupported file type' : 'could not start upload')
+  const { key, uploadUrl } = await stage.json()
 
-async function parseOne(original: File): Promise<ParsedItem[]> {
-  const file = await shrinkForParsing(original)
-  if (file.size > MAX_PARSE_BYTES) {
-    throw new Error('too large to parse — attach it instead')
-  }
-  const form = new FormData()
-  form.append('receipts', file)
-  const res = await fetch('/api/receipts/parse', { method: 'POST', body: form })
-  if (!res.ok) {
-    throw new Error((await res.json().catch(() => null))?.error || 'Could not parse receipt.')
-  }
+  const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file })
+  if (!put.ok) throw new Error('upload failed')
+
+  const res = await fetch('/api/receipts/parse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key }),
+  })
+  if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Could not parse receipt.')
   return (await res.json()).items
 }
 

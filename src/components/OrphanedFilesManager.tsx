@@ -9,7 +9,7 @@ interface Props {
 
 function shortKey(key: string) {
   // receipts/tabid-nanoid.ext → nanoid.ext
-  return key.replace(/^receipts\//, '')
+  return key.replace(/^(receipts|staging)\//, '')
 }
 
 export function OrphanedFilesManager({ initialOrphans }: Props) {
