@@ -22,7 +22,11 @@ function getModel() {
   return "openai/gpt-5-nano"
 }
 
-export async function parseReceipt(image: ArrayBuffer): Promise<{ items: { description: string; amountCents: number }[] }> {
+export async function parseReceipt(image: ArrayBuffer, mediaType = "image/png"): Promise<{ items: { description: string; amountCents: number }[] }> {
+  const isPdf = mediaType === "application/pdf"
+  if (isPdf && process.env.OPENAI_BASE_URL) {
+    throw new Error("PDF receipts aren't supported with a custom OPENAI_BASE_URL model; upload an image instead.")
+  }
   const agent = new ToolLoopAgent({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     model: getModel() as any,
@@ -38,7 +42,9 @@ export async function parseReceipt(image: ArrayBuffer): Promise<{ items: { descr
           type: "text",
           text: "Extract every line item from this receipt as a flat list. Include food/goods items, tax, and gratuity — but exclude subtotal and total rows. For items with a quantity, include it in the description (e.g. 'Craft Lager (×2)') and use the line total as the amount. The sum of all returned items should equal the total amount paid on the receipt.",
         },
-        { type: "image", image },
+        isPdf
+          ? { type: "file", data: image, mediaType }
+          : { type: "image", image },
       ],
     }],
   })

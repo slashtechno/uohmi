@@ -38,7 +38,7 @@ export function ReceiptImportField({ onParsed }: { onParsed: (items: ParsedItem[
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           multiple
           onChange={(e) => setFileCount(e.target.files?.length ?? 0)}
           className="min-w-0 w-full sm:flex-1 text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"

@@ -3,7 +3,7 @@ import { getBrand } from '@/lib/branding'
 
 interface TabEmailProps {
   kind: 'opened' | 'item-added' | 'finalized' | 'reminder' | 'cancelled' | 'link-updated' | 'merged'
-  tab: { recipientName: string; notes?: string; mode?: string | null }
+  tab: { recipientName: string; notes?: string; mode?: string | null; receiptFileKeys?: string[] }
   items: { description: string; amountCents: number }[]
   total: number
   balance: number
@@ -14,6 +14,7 @@ interface TabEmailProps {
 export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: TabEmailProps) {
   const format = (cents: number) => `$${(cents / 100).toFixed(2)}`
   const brand = getBrand(tab.mode)
+  const attachmentCount = tab.receiptFileKeys?.length ?? 0
   const preheaders: Record<typeof kind, string> = {
     opened: brand.emailPreheaders.opened,
     'item-added': brand.emailPreheaders['item-added'](latest ?? ''),
@@ -91,6 +92,12 @@ export function TabEmail({ kind, tab, items, total, balance, latest, payUrl }: T
                   <Section style={{ marginTop: '24px', padding: '16px', backgroundColor: brand.accent.bg, borderRadius: '8px' }}>
                     <Text style={{ fontSize: '14px', color: brand.accent.dark, fontStyle: 'italic' }}>&ldquo;{tab.notes}&rdquo;</Text>
                   </Section>
+                )}
+
+                {attachmentCount > 0 && (
+                  <Text style={{ marginTop: '24px', fontSize: '14px', color: '#7c6e67', textAlign: 'center' }}>
+                    {attachmentCount === 1 ? '1 receipt is' : `${attachmentCount} receipts are`} available on your invoice page. Use the button below to view {attachmentCount === 1 ? 'it' : 'them'}.
+                  </Text>
                 )}
 
                 <Section style={{ marginTop: '32px', textAlign: 'center' }}>

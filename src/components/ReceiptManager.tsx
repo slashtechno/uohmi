@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Lightbox } from './Lightbox'
+import { ReceiptThumb, isPdfKey } from './ReceiptThumb'
 
 interface ReceiptManagerProps {
   tabId: string
@@ -11,7 +12,7 @@ interface ReceiptManagerProps {
 }
 
 export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManagerProps) {
-  const [receipts, setReceipts] = useState(initialUrls)
+  const [receipts, setReceipts] = useState<{ key: string; url: string; previewUrl?: string }[]>(initialUrls)
   const [lightbox, setLightbox] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -43,7 +44,9 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
       }
 
       const proxyUrl = `/api/files/${key.split('/').map(encodeURIComponent).join('/')}`
-      setReceipts(prev => [...prev, { key, url: proxyUrl }])
+      // Show the local file right away so the thumbnail never races the proxy/storage write-lag.
+      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined
+      setReceipts(prev => [...prev, { key, url: proxyUrl, previewUrl }])
       toast.success('Receipt uploaded')
     } catch {
       toast.error('Something went wrong. Please try again.')
@@ -61,7 +64,11 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
         body: JSON.stringify({ key }),
       })
       if (!res.ok) { toast.error('Failed to remove receipt.'); return }
-      setReceipts(prev => prev.filter(r => r.key !== key))
+      setReceipts(prev => {
+        const preview = prev.find(r => r.key === key)?.previewUrl
+        if (preview) URL.revokeObjectURL(preview)
+        return prev.filter(r => r.key !== key)
+      })
       if (lightbox === key) setLightbox(null)
       toast.success('Receipt removed')
     } catch {
@@ -77,15 +84,9 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
 
       {receipts.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
-          {receipts.map(({ key, url }) => (
+          {receipts.map(({ key, url, previewUrl }) => (
             <div key={key} className="relative group">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt="Receipt"
-                onClick={() => setLightbox(key)}
-                className="w-20 h-20 object-cover rounded-lg border border-border cursor-zoom-in hover:opacity-90 transition-opacity"
-              />
+              <ReceiptThumb fileKey={key} url={url} previewUrl={previewUrl} sizeClass="w-20 h-20" onOpen={() => setLightbox(key)} />
               {canUpload && (
                 <button
                   onClick={() => handleRemove(key)}
@@ -105,7 +106,7 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf"
             className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f) }}
           />
@@ -114,15 +115,15 @@ export function ReceiptManager({ tabId, initialUrls, canUpload }: ReceiptManager
             disabled={uploading}
             className="px-3 py-1.5 bg-card border border-border text-ink text-sm rounded-lg hover:bg-card-hover transition-colors disabled:opacity-50"
           >
-            {uploading ? 'Uploading…' : '+ Add receipt'}
+            {uploading ? 'Uploading…' : '+ Add receipt or PDF'}
           </button>
         </div>
       )}
 
       {lightbox && (() => {
         const r = receipts.find(r => r.key === lightbox)
-        if (!r) return null
-        return <Lightbox src={r.url} alt="Receipt" onClose={() => setLightbox(null)} />
+        if (!r || isPdfKey(r.key)) return null
+        return <Lightbox src={r.previewUrl ?? r.url} alt="Receipt" onClose={() => setLightbox(null)} />
       })()}
     </div>
   )

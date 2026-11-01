@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   // Parse each receipt in parallel and merge the line items into a single flat list.
   const results = await Promise.all(
-    files.map(async (file) => parseReceipt(await file.arrayBuffer()))
+    files.map(async (file) => parseReceipt(await file.arrayBuffer(), file.type))
   )
   const items = results.flatMap((r) => r.items)
   return NextResponse.json({ items })

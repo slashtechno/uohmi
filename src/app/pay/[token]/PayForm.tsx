@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { Lightbox } from '@/components/Lightbox'
+import { ReceiptThumb, isPdfKey } from '@/components/ReceiptThumb'
 import { Input } from '@/components/Input'
 import { ErrorMessage } from '@/components/ErrorMessage'
 
@@ -69,19 +70,12 @@ export function PayForm({ tabToken, balance, receiptUrls }: PayFormProps) {
           <p className="text-xs text-ink-3 mb-2">Receipts</p>
           <div className="flex flex-wrap gap-2">
             {receiptUrls.map(({ key, url }) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={key}
-                src={url}
-                alt="Receipt"
-                onClick={() => setLightbox(key)}
-                className="w-16 h-16 object-cover rounded-lg border border-border cursor-zoom-in hover:opacity-90 transition-opacity"
-              />
+              <ReceiptThumb key={key} fileKey={key} url={url} sizeClass="w-16 h-16" onOpen={() => setLightbox(key)} />
             ))}
           </div>
           {lightbox && (() => {
             const r = receiptUrls.find(r => r.key === lightbox)
-            if (!r) return null
+            if (!r || isPdfKey(r.key)) return null
             return <Lightbox src={r.url} alt="Receipt" onClose={() => setLightbox(null)} />
           })()}
         </div>

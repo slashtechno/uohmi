@@ -7,7 +7,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!tab) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const ALLOWED_TYPES: Record<string, string> = {
-    'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif',
+    'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif', 'application/pdf': 'pdf',
   }
 
   const { mediaType } = await req.json()

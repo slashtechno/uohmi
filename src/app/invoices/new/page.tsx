@@ -187,9 +187,9 @@ export default function NewInvoicePage() {
         <div className="mb-4 space-y-3">
           <ReceiptImportField onParsed={(parsed) => { if (parsed?.length) handleImportedItems(parsed) }} />
           <div className="p-3 bg-card-hover rounded-lg border border-border">
-            <label className="text-xs font-medium text-ink-2 mb-2 block">Attach receipt images</label>
+            <label className="text-xs font-medium text-ink-2 mb-2 block">Attach receipts (images or PDF)</label>
             <input
-              type="file" accept="image/*" multiple
+              type="file" accept="image/*,application/pdf" multiple
               onChange={(e) => handleReceiptFiles(e.target.files)}
               className="w-full text-sm text-ink file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-accent-bg file:text-accent-dark hover:file:bg-accent-bg/80 file:cursor-pointer"
             />
