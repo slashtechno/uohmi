@@ -3,13 +3,14 @@ import { useState, useRef } from 'react'
 import { ErrorMessage } from './ErrorMessage'
 
 type ParsedItem = { description: string; amountCents: number }
+type ParseResult = { items: ParsedItem[]; warning?: string }
 
 // A few files are staged and parsed at a time.
 const CONCURRENCY = 3
 
 // Stage the file in storage (direct from the browser, so there's no function request-size limit),
 // then have the server parse it by key. The server deletes the staged file when it's done.
-async function parseOne(file: File): Promise<ParsedItem[]> {
+async function parseOne(file: File): Promise<ParseResult> {
   const stage = await fetch('/api/receipts/uploads', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -27,7 +28,7 @@ async function parseOne(file: File): Promise<ParsedItem[]> {
     body: JSON.stringify({ key }),
   })
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error || 'Could not parse receipt.')
-  return (await res.json()).items
+  return res.json()
 }
 
 export function ReceiptImportField({ onParsed }: {
@@ -46,7 +47,7 @@ export function ReceiptImportField({ onParsed }: {
     setParsing(true)
     setError('')
     try {
-      const results: PromiseSettledResult<ParsedItem[]>[] = new Array(files.length)
+      const results: PromiseSettledResult<ParseResult>[] = new Array(files.length)
       let next = 0
       await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, async () => {
         while (next < files.length) {
@@ -59,8 +60,12 @@ export function ReceiptImportField({ onParsed }: {
       const items: ParsedItem[] = []
       const okFiles: File[] = []
       const failures: string[] = []
+      const warnings: string[] = []
       results.forEach((r, i) => {
-        if (r.status === 'fulfilled') { items.push(...r.value); okFiles.push(files[i]) }
+        if (r.status === 'fulfilled') {
+          items.push(...r.value.items); okFiles.push(files[i])
+          if (r.value.warning) warnings.push(files.length > 1 ? `${files[i].name}: ${r.value.warning}` : r.value.warning)
+        }
         else failures.push(`${files[i].name}: ${r.reason instanceof Error ? r.reason.message : 'failed'}`)
       })
 
@@ -69,11 +74,13 @@ export function ReceiptImportField({ onParsed }: {
         if (inputRef.current) inputRef.current.value = ''
         setFileCount(0)
       }
-      if (failures.length > 0) {
-        setError(okFiles.length > 0
+      const messages = [
+        failures.length > 0 && (okFiles.length > 0
           ? `Parsed ${okFiles.length} of ${files.length}. ${failures.join('; ')}`
-          : failures.join('; '))
-      }
+          : failures.join('; ')),
+        ...warnings,
+      ].filter(Boolean)
+      if (messages.length > 0) setError(messages.join(' '))
     } finally {
       setParsing(false)
     }

@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
   try {
     const bytes = await downloadFile(key)
     if (!bytes) return NextResponse.json({ error: 'Could not read the uploaded file.' }, { status: 502 })
-    const { items } = await parseReceipt(bytes, mediaType)
-    return NextResponse.json({ items })
+    return NextResponse.json(await parseReceipt(bytes, mediaType))
   } catch (e) {
     if (e instanceof UnsupportedReceiptError) {
       return NextResponse.json({ error: e.message }, { status: 422 })
