@@ -6,11 +6,13 @@ import { getFileUrl, getTab } from '@/lib/db'
 const tabCache = new Map<string, { keys: string[]; at: number }>()
 const TAB_TTL = 5 * 60 * 1000
 
-async function getTabReceiptKeys(tabId: string, fresh = false): Promise<string[]> {
+// Returns null when the tab doesn't exist (e.g. deleted by a merge), so callers can skip retries.
+async function getTabReceiptKeys(tabId: string, fresh = false): Promise<string[] | null> {
   const cached = tabCache.get(tabId)
   if (!fresh && cached && Date.now() - cached.at < TAB_TTL) return cached.keys
   const tab = await getTab(tabId)
-  const keys = tab?.receiptFileKeys ?? []
+  if (!tab) return null
+  const keys = tab.receiptFileKeys ?? []
   tabCache.set(tabId, { keys, at: Date.now() })
   return keys
 }
@@ -52,13 +54,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ key
   if (!tabId || tabId.length < 10) return notFound()
   // A miss may just be a stale cache entry (file uploaded after it was cached), so refetch once.
   let receiptKeys = await getTabReceiptKeys(tabId)
-  if (!receiptKeys.includes(fileKey)) receiptKeys = await getTabReceiptKeys(tabId, true)
-  // The sheet can lag a second or two behind a fresh upload, so give it one more chance before 404ing.
-  if (!receiptKeys.includes(fileKey)) {
+  if (!receiptKeys?.includes(fileKey)) receiptKeys = await getTabReceiptKeys(tabId, true)
+  // The sheet can lag a second or two behind a fresh upload, so give an existing tab one more chance before 404ing.
+  if (receiptKeys && !receiptKeys.includes(fileKey)) {
     await new Promise(r => setTimeout(r, 1500))
     receiptKeys = await getTabReceiptKeys(tabId, true)
   }
-  if (!receiptKeys.includes(fileKey)) return notFound()
+  if (!receiptKeys?.includes(fileKey)) return notFound()
 
   const contentType = TYPE_BY_EXT[fileKey.split('.').pop()?.toLowerCase() ?? '']
   if (!contentType) return notFound()
